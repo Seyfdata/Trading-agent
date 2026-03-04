@@ -1,0 +1,42 @@
+# ============================================
+# FICHIERS IGNORÉS PAR GIT
+# Ne JAMAIS supprimer ce fichier !
+# ============================================
+
+# Clés API et secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environnement virtuel
+venv/
+.venv/
+env/
+
+# Logs
+logs/*.log
+
+# Base de données locale
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Données temporaires
+*.tmp
+*.bak

@@ -1,0 +1,26 @@
+# ============================================
+# TRADING AGENT — Dépendances Python
+# Installation : pip install -r requirements.txt
+# ============================================
+
+# --- Phase 2 : Morning Scan ---
+feedparser==6.0.11       # Lecture des flux RSS
+requests>=2.31.0         # Appels HTTP (Telegram, API)
+python-dotenv>=1.0.0     # Lire le fichier .env
+
+# --- Phase 2+ : Claude API ---
+# Décommenter quand tu auras une clé API Anthropic :
+# anthropic>=0.39.0
+
+# --- Phase 3 : Scraping social ---
+# Décommenter quand tu seras en Phase 3 :
+# praw>=7.7.0            # Reddit API
+# beautifulsoup4>=4.12.0 # Scraping HTML
+# yfinance>=0.2.30       # Données de marché
+
+# --- Phase 3 : Analyse ---
+# pandas>=2.1.0          # Manipulation de données
+# numpy>=1.26.0          # Calculs numériques
+
+# --- Phase 3+ : Automatisation ---
+# schedule>=1.2.0        # Planification de tâches
