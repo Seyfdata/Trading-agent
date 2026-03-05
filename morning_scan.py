@@ -21,6 +21,7 @@ from scrapers.macro_calendar import (
     format_macro_section, detect_recurring_events,
     check_earnings_today, get_trading_recommendation
 )
+from scrapers.reddit import format_reddit_section
 from notifications.telegram import send_message
 from config.settings import (
     WATCHLIST, EMOJI_NEWS, EMOJI_BULL, EMOJI_WARNING,
@@ -28,7 +29,7 @@ from config.settings import (
 )
 
 
-def format_report(ticker_news, keyword_news, combined, all_count, macro_text):
+def format_report(ticker_news, keyword_news, combined, all_count, macro_text, reddit_text=None):
     """Formate le rapport complet du morning scan pour Telegram."""
 
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
@@ -49,6 +50,13 @@ def format_report(ticker_news, keyword_news, combined, all_count, macro_text):
     lines.append("")
     lines.append("=" * 35)
     lines.append("")
+
+    # === SECTION REDDIT (si disponible) ===
+    if reddit_text:
+        lines.append(reddit_text)
+        lines.append("")
+        lines.append("=" * 35)
+        lines.append("")
 
     # === SECTION NEWS TICKERS ===
     if ticker_news:
@@ -109,8 +117,21 @@ def main():
     print(f"     Verdict : {reco['verdict']}")
     print()
 
-    # 2. Collecte et filtrage des news
-    print("  2. Collecte des news RSS (10 sources)...")
+    # 2. Reddit buzz (optionnel — fonctionne si praw installé + .env configuré)
+    print("  2. Scan Reddit...")
+    reddit_text = None
+    try:
+        reddit_text = format_reddit_section()
+        if reddit_text:
+            print("     Reddit OK")
+        else:
+            print("     Reddit non configuré (skip)")
+    except Exception as e:
+        print(f"     Reddit erreur : {e} (skip)")
+    print()
+
+    # 3. Collecte et filtrage des news
+    print("  3. Collecte des news RSS (10 sources)...")
     all_news, ticker_news, keyword_news, combined = fetch_and_filter(
         max_per_feed=5
     )
@@ -120,9 +141,9 @@ def main():
     print(f"     Combiné (unique) : {len(combined)}")
     print()
 
-    # 3. Formater le rapport
+    # 4. Formater le rapport
     report = format_report(
-        ticker_news, keyword_news, combined, len(all_news), macro_text
+        ticker_news, keyword_news, combined, len(all_news), macro_text, reddit_text
     )
 
     # 4. Afficher dans le terminal

@@ -6,7 +6,7 @@ Phase 2 : c'est le premier module que tu fais tourner.
 """
 
 import feedparser
-from config.settings import RSS_FEEDS, WATCHLIST, MARKET_KEYWORDS
+from config.settings import RSS_FEEDS, WATCHLIST, MARKET_KEYWORDS, TICKER_ALIASES
 
 
 def fetch_all_news(max_per_feed=5):
@@ -38,7 +38,8 @@ def fetch_all_news(max_per_feed=5):
 
 def filter_by_tickers(news_list, tickers=None):
     """
-    Filtre les news qui mentionnent un de tes tickers.
+    Filtre les news qui mentionnent un de tes tickers OU le nom de l'entreprise.
+    Utilise TICKER_ALIASES pour matcher "Broadcom" → AVGO, "Nvidia" → NVDA, etc.
 
     Retourne les news pertinentes avec les tickers trouvés.
     """
@@ -48,12 +49,23 @@ def filter_by_tickers(news_list, tickers=None):
     relevant = []
 
     for news in news_list:
-        text = (news["title"] + " " + news["summary"]).upper()
+        text = news["title"] + " " + news["summary"]
+        text_upper = text.upper()
 
-        matched = [t for t in tickers if t in text]
+        matched_tickers = set()
 
-        if matched:
-            news["matched_tickers"] = matched
+        # 1. Chercher les tickers directs (AAPL, NVDA, etc.)
+        for t in tickers:
+            if t in text_upper:
+                matched_tickers.add(t)
+
+        # 2. Chercher les noms/aliases (Broadcom → AVGO, Nvidia → NVDA, etc.)
+        for alias, ticker in TICKER_ALIASES.items():
+            if alias.lower() in text.lower():
+                matched_tickers.add(ticker)
+
+        if matched_tickers:
+            news["matched_tickers"] = sorted(matched_tickers)
             news["match_type"] = "TICKER"
             relevant.append(news)
 

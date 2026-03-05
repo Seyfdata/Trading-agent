@@ -19,6 +19,33 @@ WATCHLIST = [
     "QCOM",   # Qualcomm
 ]
 
+# Noms complets et aliases pour capter les news qui n'utilisent pas le ticker
+# Format : "nom dans l'article" → "ticker affiché dans le rapport"
+TICKER_ALIASES = {
+    # Magnificent 7
+    "Apple": "AAPL",
+    "iPhone": "AAPL",
+    "Nvidia": "NVDA",
+    "GeForce": "NVDA",
+    "Tesla": "TSLA",
+    "Elon Musk": "TSLA",
+    "Microsoft": "MSFT",
+    "Azure": "MSFT",
+    "Meta Platforms": "META",
+    "Facebook": "META",
+    "Instagram": "META",
+    "Zuckerberg": "META",
+    "Amazon": "AMZN",
+    "AWS": "AMZN",
+    "Alphabet": "GOOGL",
+    "Google": "GOOGL",
+    # Semi-conducteurs
+    "Advanced Micro": "AMD",
+    "Broadcom": "AVGO",
+    "Qualcomm": "QCOM",
+    "Snapdragon": "QCOM",
+}
+
 # === FLUX RSS ===
 # Sources de news à scanner (classées par fiabilité)
 RSS_FEEDS = {
