@@ -1,0 +1,5 @@
+SWING_TICKERS (comma):
+
+
+PUMP_TICKERS (comma):
+
