@@ -1,18 +1,18 @@
 """
 Module de collecte de news via flux RSS.
-Récupère les dernières news financières et filtre par tickers.
+Récupère les dernières news financières et filtre par tickers + mots-clés marché.
 
 Phase 2 : c'est le premier module que tu fais tourner.
 """
 
 import feedparser
-from config.settings import RSS_FEEDS, WATCHLIST
+from config.settings import RSS_FEEDS, WATCHLIST, MARKET_KEYWORDS
 
 
 def fetch_all_news(max_per_feed=5):
     """
     Récupère les dernières news de tous les flux RSS.
-    
+
     Retourne une liste de dicts :
     [{"source": "Reuters", "title": "...", "link": "...", "summary": "..."}]
     """
@@ -31,7 +31,7 @@ def fetch_all_news(max_per_feed=5):
                 })
 
         except Exception as e:
-            print(f"[RSS] Erreur sur {source_name}: {e}")
+            print(f"  [RSS] Erreur sur {source_name}: {e}")
 
     return all_news
 
@@ -39,7 +39,7 @@ def fetch_all_news(max_per_feed=5):
 def filter_by_tickers(news_list, tickers=None):
     """
     Filtre les news qui mentionnent un de tes tickers.
-    
+
     Retourne les news pertinentes avec les tickers trouvés.
     """
     if tickers is None:
@@ -48,32 +48,85 @@ def filter_by_tickers(news_list, tickers=None):
     relevant = []
 
     for news in news_list:
-        # Chercher dans le titre et le résumé
         text = (news["title"] + " " + news["summary"]).upper()
 
         matched = [t for t in tickers if t in text]
 
         if matched:
             news["matched_tickers"] = matched
+            news["match_type"] = "TICKER"
             relevant.append(news)
 
     return relevant
 
 
+def filter_by_keywords(news_list, keywords=None):
+    """
+    Filtre les news qui mentionnent des mots-clés macro/marché.
+    Complément au filtrage par tickers.
+
+    Retourne les news pertinentes avec les mots-clés trouvés.
+    """
+    if keywords is None:
+        keywords = MARKET_KEYWORDS
+
+    relevant = []
+
+    for news in news_list:
+        text = (news["title"] + " " + news["summary"]).upper()
+
+        matched = [kw for kw in keywords if kw.upper() in text]
+
+        if matched:
+            news["matched_keywords"] = matched
+            news["match_type"] = "KEYWORD"
+            relevant.append(news)
+
+    return relevant
+
+
+def fetch_and_filter(max_per_feed=5, tickers=None, keywords=None):
+    """
+    Fonction tout-en-un : collecte + filtrage tickers + filtrage keywords.
+    Déduplique les résultats (une news peut matcher ticker ET keyword).
+
+    Retourne (all_news, ticker_news, keyword_news, combined_unique)
+    """
+    all_news = fetch_all_news(max_per_feed)
+
+    ticker_news = filter_by_tickers(all_news, tickers)
+    keyword_news = filter_by_keywords(all_news, keywords)
+
+    # Dédupliquer : fusionner les deux listes sans doublons (par titre)
+    seen_titles = set()
+    combined = []
+
+    for news in ticker_news:
+        if news["title"] not in seen_titles:
+            seen_titles.add(news["title"])
+            combined.append(news)
+
+    for news in keyword_news:
+        if news["title"] not in seen_titles:
+            seen_titles.add(news["title"])
+            combined.append(news)
+
+    return all_news, ticker_news, keyword_news, combined
+
+
 # === TEST ===
 if __name__ == "__main__":
-    # Exécute ce fichier seul pour tester : python scrapers/rss_news.py
     print("Récupération des news...")
-    news = fetch_all_news(max_per_feed=3)
-    print(f"Total : {len(news)} news récupérées\n")
+    all_news, ticker_news, keyword_news, combined = fetch_and_filter(max_per_feed=3)
 
-    for n in news[:5]:
-        print(f"[{n['source']}] {n['title']}")
-        print(f"  {n['link']}\n")
+    print(f"Total : {len(all_news)} news récupérées")
+    print(f"Par tickers : {len(ticker_news)}")
+    print(f"Par mots-clés : {len(keyword_news)}")
+    print(f"Combiné (unique) : {len(combined)}\n")
 
-    print("\nFiltrage par tickers...")
-    relevant = filter_by_tickers(news)
-    print(f"{len(relevant)} news pertinentes\n")
-
-    for n in relevant:
-        print(f"[{', '.join(n['matched_tickers'])}] {n['title']}")
+    for n in combined[:10]:
+        match_type = n.get("match_type", "?")
+        tickers = ", ".join(n.get("matched_tickers", []))
+        keywords = ", ".join(n.get("matched_keywords", [])[:3])
+        tag = tickers if match_type == "TICKER" else keywords
+        print(f"[{match_type}] [{tag}] {n['title']}")
