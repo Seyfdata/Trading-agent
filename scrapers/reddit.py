@@ -55,12 +55,19 @@ def run_scanner(scanner_dir, refresh=True, cache_ttl=1800):
         cmd.append("--refresh")
 
     try:
+        import os
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+
         result = subprocess.run(
             cmd,
             cwd=str(scanner_dir),
             capture_output=True,
             text=True,
             timeout=120,
+            encoding="utf-8",
+            errors="replace",
+            env=env,
         )
 
         if result.returncode != 0:
