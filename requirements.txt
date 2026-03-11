@@ -24,3 +24,7 @@ python-dotenv>=1.0.0     # Lire le fichier .env
 
 # --- Phase 3+ : Automatisation ---
 # schedule>=1.2.0        # Planification de tâches
+
+# --- Phase 4 : Dashboard API ---
+fastapi>=0.111.0         # Framework API REST
+uvicorn[standard]>=0.29.0  # Serveur ASGI

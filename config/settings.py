@@ -13,10 +13,22 @@ WATCHLIST = [
     "MSFT",   # Microsoft
     "META",   # Meta (Facebook)
     "AMZN",   # Amazon
-    "GOOGL",  # Google
+    "GOOGL",  # Alphabet
     "AMD",    # AMD
     "AVGO",   # Broadcom
     "QCOM",   # Qualcomm
+    "INTC",   # Intel
+    "PLTR",   # Palantir
+    "SMCI",   # Super Micro Computer
+    "MU",     # Micron
+    "ASML",   # ASML Holdings
+    "TWLO",   # Twilio
+    "BABA",   # Alibaba
+    "ZS",     # Zscaler
+    "MRVL",   # Marvell Technology
+    "CRM",    # Salesforce
+    "SNOW",   # Snowflake
+    "TSM",    # TSMC
 ]
 
 # Noms complets et aliases pour capter les news qui n'utilisent pas le ticker
@@ -44,6 +56,22 @@ TICKER_ALIASES = {
     "Broadcom": "AVGO",
     "Qualcomm": "QCOM",
     "Snapdragon": "QCOM",
+    # Nouveaux tickers
+    "Intel": "INTC",
+    "Palantir": "PLTR",
+    "Super Micro": "SMCI",
+    "SuperMicro": "SMCI",
+    "Micron": "MU",
+    "ASML": "ASML",
+    "Twilio": "TWLO",
+    "Alibaba": "BABA",
+    "Jack Ma": "BABA",
+    "Zscaler": "ZS",
+    "Marvell": "MRVL",
+    "Salesforce": "CRM",
+    "Snowflake": "SNOW",
+    "TSMC": "TSM",
+    "Taiwan Semiconductor": "TSM",
 }
 
 # === FLUX RSS ===
@@ -164,8 +192,13 @@ KILLZONE_START_HOUR = 14
 KILLZONE_START_MIN = 30
 KILLZONE_END_HOUR = 16
 KILLZONE_END_MIN = 30
+KILLZONE_TEST_MODE = False   # Mettre True pour forcer la killzone en dev
 
 # === TELEGRAM ===
+# Mettre à True pour envoyer les rapports sur Telegram
+# False = mode test / développement local (dashboard uniquement)
+TELEGRAM_ENABLED = False
+
 # Format des messages
 EMOJI_BULL = "🟢"
 EMOJI_BEAR = "🔴"

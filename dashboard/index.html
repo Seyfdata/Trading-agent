@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMC-AI Morning Brief v2</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e17; --card: #111827; --border: #1e293b;
+      --bull: #10b981; --bear: #ef4444; --neutral: #f59e0b;
+      --accent: #3b82f6; --purple: #8b5cf6;
+      --text: #f1f5f9; --muted: #64748b; --dim: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+    /* Layout */
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .header-title { font-size: 15px; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .tabs { display: flex; padding: 0 24px; background: var(--card); border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .tab { padding: 10px 16px; cursor: pointer; border: none; background: transparent; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 12px; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover { color: var(--text); }
+    .content { padding: 20px 24px; flex: 1; }
+    /* Cards */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .card-sm { padding: 10px 14px; }
+    /* Grid */
+    .g5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; }
+    .g3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    /* Section title */
+    .stitle { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+    .mb8 { margin-bottom: 8px; } .mb12 { margin-bottom: 12px; } .mb16 { margin-bottom: 16px; }
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: .8px; }
+    .b-bull    { background: rgba(16,185,129,.15); color: var(--bull);    border: 1px solid rgba(16,185,129,.3); }
+    .b-bear    { background: rgba(239,68,68,.15);  color: var(--bear);    border: 1px solid rgba(239,68,68,.3); }
+    .b-neutral { background: rgba(245,158,11,.15); color: var(--neutral); border: 1px solid rgba(245,158,11,.3); }
+    .b-accent  { background: rgba(59,130,246,.15); color: var(--accent);  border: 1px solid rgba(59,130,246,.3); }
+    .b-purple  { background: rgba(139,92,246,.15); color: var(--purple);  border: 1px solid rgba(139,92,246,.3); }
+    .b-muted   { background: rgba(100,116,139,.1); color: var(--muted);   border: 1px solid rgba(100,116,139,.25); }
+    /* Table */
+    .tbl { width: 100%; border-collapse: collapse; }
+    .tbl th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .tbl td { padding: 9px 12px; border-bottom: 1px solid rgba(30,41,59,.4); font-size: 12px; white-space: nowrap; }
+    .tbl tbody tr:hover td { background: rgba(30,41,59,.4); }
+    /* Score bar */
+    .strack { height: 5px; background: rgba(30,41,59,.8); border-radius: 3px; overflow: hidden; flex: 1; }
+    .sfill  { height: 100%; border-radius: 3px; }
+    /* Button */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-p { background: rgba(59,130,246,.12); border-color: var(--accent); color: var(--accent); }
+    /* Refresh button */
+    .btn-scan { background: transparent; border-color: #334155; color: #94a3b8; transition: border-color .2s, color .2s; }
+    .btn-scan:hover:not(:disabled) { border-color: #3b82f6; color: #3b82f6; }
+    .btn-scan:disabled { opacity: .65; cursor: not-allowed; }
+    .btn-scan.is-scanning { border-color: #3b82f6; color: #3b82f6; }
+    @keyframes spin-btn { to { transform: rotate(360deg); } }
+    .spin-anim { display: inline-block; animation: spin-btn 1s linear infinite; }
+    /* TradingView link */
+    .tv-link { text-decoration: none; font-weight: 700; }
+    .tv-link:hover { text-decoration: underline; }
+    /* Score cell with bg bar */
+    .score-cell { position: relative; display: inline-flex; align-items: center; justify-content: flex-end; min-width: 50px; height: 22px; border-radius: 3px; overflow: hidden; padding: 0 6px; }
+    .score-bar-bg { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+    /* Hot badge */
+    @keyframes blink-hot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+    .badge-hot { animation: blink-hot 1.2s ease-in-out infinite; }
+    /* News link */
+    .news-link { color: var(--text); text-decoration: none; font-size: 12px; line-height: 1.5; }
+    .news-link:hover { color: var(--accent); text-decoration: underline; }
+    /* Killzone indicator */
+    @keyframes pulse-kz { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,.4); } 50% { opacity: .85; box-shadow: 0 0 0 5px rgba(239,68,68,0); } }
+    .kz-live { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.4); animation: pulse-kz 1.8s ease-in-out infinite; cursor: default; }
+    .kz-off  { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: rgba(100,116,139,.1); color: var(--muted); border: 1px solid rgba(100,116,139,.2); cursor: default; }
+    /* Alert item */
+    @keyframes slide-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    .alert-item { padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid; animation: slide-in .25s ease; }
+    .alert-HIGH   { background: rgba(239,68,68,.08);  border-left-color: #ef4444; }
+    .alert-MEDIUM { background: rgba(245,158,11,.08); border-left-color: #f59e0b; }
+    .alert-LOW    { background: rgba(100,116,139,.08); border-left-color: #475569; }
+    /* Unread badge on tab */
+    .tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #ef4444; color: #fff; font-size: 9px; font-weight: 700; margin-left: 5px; }
+    /* Inst card */
+    .inst-name  { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+    .inst-price { font-size: 19px; font-weight: 700; }
+    .inst-chg   { font-size: 12px; font-weight: 500; margin-top: 2px; }
+    /* Top3 card */
+    .t3card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; position: relative; overflow: hidden; }
+    .t3card.r1 { border-color: rgba(59,130,246,.5); }
+    .t3card.r2 { border-color: rgba(139,92,246,.4); }
+    .t3card.r3 { border-color: rgba(16,185,129,.4); }
+    .t3bg { position: absolute; top: 10px; right: 14px; font-size: 42px; font-weight: 700; color: rgba(255,255,255,.03); }
+    .t3ticker { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+    .t3score  { font-size: 34px; font-weight: 700; line-height: 1; }
+    .t3lbl    { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+    /* Metric */
+    .metric { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+    .mval { font-size: 26px; font-weight: 700; }
+    .mlbl { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+    /* Expand row */
+    .xrow td { padding: 14px 12px; background: rgba(10,14,23,.6); }
+    /* News */
+    .nitem { padding: 11px 0; border-bottom: 1px solid rgba(30,41,59,.4); }
+    .nitem:last-child { border-bottom: none; }
+    /* Flex */
+    .row  { display: flex; align-items: center; }
+    .rowb { display: flex; align-items: center; justify-content: space-between; }
+    .wrap { flex-wrap: wrap; }
+    .g4 { gap: 4px; } .g6 { gap: 6px; } .g8 { gap: 8px; } .g12 { gap: 12px; }
+    /* Color helpers */
+    .ac { color: var(--accent); } .mc { color: var(--muted); } .pc { color: var(--purple); }
+    /* Regime pill */
+    .rpill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .rp-BULL    { background: rgba(16,185,129,.15); color: var(--bull);    border: 1px solid rgba(16,185,129,.3); }
+    .rp-BEAR    { background: rgba(239,68,68,.15);  color: var(--bear);    border: 1px solid rgba(239,68,68,.3); }
+    .rp-NEUTRAL { background: rgba(245,158,11,.15); color: var(--neutral); border: 1px solid rgba(245,158,11,.3); }
+    /* Vdiv */
+    .vd { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+    /* Loading state */
+    #load-msg { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 14px; letter-spacing: 1px; gap: 16px; }
+    .load-dot { display: inline-block; animation: ld .8s linear infinite; } @keyframes ld { to { transform: rotate(360deg); } }
+    @media (max-width: 900px) { .g5 { grid-template-columns: repeat(3,1fr); } .g3,.g2 { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .g5 { grid-template-columns: repeat(2,1fr); } .content { padding: 12px; } }
+  </style>
+</head>
+<body>
+
+<!-- Visible AVANT que React charge — remplacé dès que React monte -->
+<div id="root">
+  <div id="load-msg">
+    <div style="color:#3b82f6;font-size:16px;font-weight:700;letter-spacing:3px;">SMC-AI MORNING BRIEF v2</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="load-dot" style="width:18px;height:18px;border:2px solid #1e293b;border-top-color:#3b82f6;border-radius:50%;"></div>
+      Chargement des données...
+    </div>
+  </div>
+</div>
+
+<!-- CDN : React → ReactDOM → PropTypes → Recharts → Babel (ordre important) -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<script type="text/babel">
+// ── Hooks et composants Recharts ──────────────────────────────────────────
+const { useState, useEffect, useMemo } = React;
+const {
+  AreaChart, Area, BarChart, Bar, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} = Recharts;
+
+// ── Données de démo ───────────────────────────────────────────────────────
+
+const DEMO = {
+  market: {
+    regime: 'BULL', score: 72, sizing_recommendation: '1%',
+    instruments: {
+      spy:   { price: 527.34, change:  0.31 },
+      qqq:   { price: 449.12, change:  0.48 },
+      vix:   { price:  14.20, change: -3.10 },
+      dxy:   { price: 103.80, change: -0.12 },
+      us10y: { price:   4.28, change:  0.02 }
+    }
+  },
+  macro: {
+    verdict: 'GO', risque: '1% normal',
+    raison: 'Aucun événement majeur détecté',
+    events: [], earnings_today: []
+  },
+  tickers: { tickers: [
+    { ticker:'NVDA', rank:1, top3:true,  total_score:91, sma200_score:25, volume_score:25, reddit_score:22, news_score:19, market:{ price:875.40, change_day: 2.8, change_week: 6.2, dist_sma200: -1.8, above_sma200:false, vol_relative:2.1 }, reddit:{ mentions:18, sentiment:0.6 }, news_count:{ ticker_matches:4, keyword_matches:2 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'SMCI', rank:2, top3:true,  total_score:85, sma200_score:25, volume_score:18, reddit_score:20, news_score:22, market:{ price: 43.20, change_day: 4.1, change_week: 8.5, dist_sma200: -3.2, above_sma200:false, vol_relative:1.8 }, reddit:{ mentions:12, sentiment:0.5 }, news_count:{ ticker_matches:4, keyword_matches:1 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'AVGO', rank:3, top3:true,  total_score:78, sma200_score:13, volume_score:25, reddit_score:15, news_score:20, market:{ price:1243.50,change_day: 1.5, change_week: 3.2, dist_sma200:  5.2, above_sma200:true,  vol_relative:2.2 }, reddit:{ mentions: 8, sentiment:0.3 }, news_count:{ ticker_matches:3, keyword_matches:0 }, components:{ sma200_detail:'above_sma200_healthy' } },
+    { ticker:'AMD',  rank:4, top3:false, total_score:71, sma200_score:22, volume_score:18, reddit_score:20, news_score:11, market:{ price:104.20, change_day:-0.4, change_week:-2.3, dist_sma200: -8.1, above_sma200:false, vol_relative:1.6 }, reddit:{ mentions:11, sentiment:0.4 }, news_count:{ ticker_matches:2, keyword_matches:2 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'MU',   rank:5, top3:false, total_score:70, sma200_score:25, volume_score:18, reddit_score:15, news_score:12, market:{ price: 87.40, change_day: 2.1, change_week: 4.8, dist_sma200: -4.1, above_sma200:false, vol_relative:1.6 }, reddit:{ mentions: 7, sentiment:0.3 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'PLTR', rank:6, top3:false, total_score:70, sma200_score: 4, volume_score:18, reddit_score:25, news_score:23, market:{ price: 82.30, change_day: 3.2, change_week:12.1, dist_sma200: 26.4, above_sma200:true,  vol_relative:1.7 }, reddit:{ mentions:22, sentiment:0.7 }, news_count:{ ticker_matches:4, keyword_matches:0 }, components:{ sma200_detail:'above_sma200_extended' } },
+    { ticker:'MRVL', rank:7, top3:false, total_score:68, sma200_score:25, volume_score:18, reddit_score:13, news_score:12, market:{ price: 68.90, change_day: 2.4, change_week: 5.8, dist_sma200: -2.4, above_sma200:false, vol_relative:1.9 }, reddit:{ mentions: 6, sentiment:0.4 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'INTC', rank:8, top3:false, total_score:67, sma200_score:20, volume_score:18, reddit_score:18, news_score:11, market:{ price: 20.80, change_day: 1.2, change_week:-1.4, dist_sma200:-14.2, above_sma200:false, vol_relative:1.8 }, reddit:{ mentions: 9, sentiment:-0.1}, news_count:{ ticker_matches:2, keyword_matches:2 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'TSLA', rank:9, top3:false, total_score:64, sma200_score:20, volume_score:10, reddit_score:22, news_score:12, market:{ price:178.50, change_day:-1.5, change_week:-4.2, dist_sma200:-15.3, above_sma200:false, vol_relative:1.4 }, reddit:{ mentions:14, sentiment:0.2 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'META', rank:10,top3:false, total_score:51, sma200_score: 8, volume_score:10, reddit_score:15, news_score:18, market:{ price:586.20, change_day: 1.8, change_week: 3.4, dist_sma200: 12.1, above_sma200:true,  vol_relative:1.1 }, reddit:{ mentions: 7, sentiment:0.3 }, news_count:{ ticker_matches:3, keyword_matches:1 }, components:{ sma200_detail:'above_sma200_extended' } },
+    { ticker:'ZS',   rank:11,top3:false, total_score:50, sma200_score:18, volume_score:10, reddit_score:10, news_score:12, market:{ price:194.80, change_day: 1.7, change_week: 4.2, dist_sma200:  4.8, above_sma200:true,  vol_relative:1.2 }, reddit:{ mentions: 4, sentiment:0.2 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'near_sma200' } },
+    { ticker:'TSM',  rank:12,top3:false, total_score:49, sma200_score:25, volume_score: 5, reddit_score: 8, news_score:11, market:{ price:178.60, change_day:-0.8, change_week: 1.4, dist_sma200: -0.8, above_sma200:false, vol_relative:1.1 }, reddit:{ mentions: 4, sentiment:0.2 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'near_sma200' } },
+    { ticker:'SNOW', rank:13,top3:false, total_score:48, sma200_score:20, volume_score:10, reddit_score:10, news_score: 8, market:{ price:142.30, change_day:-1.2, change_week:-3.1, dist_sma200:-12.4, above_sma200:false, vol_relative:1.2 }, reddit:{ mentions: 5, sentiment:0.0 }, news_count:{ ticker_matches:1, keyword_matches:1 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'AAPL', rank:14,top3:false, total_score:43, sma200_score:13, volume_score: 5, reddit_score:13, news_score:12, market:{ price:211.20, change_day: 1.2, change_week: 0.8, dist_sma200:  7.3, above_sma200:true,  vol_relative:1.0 }, reddit:{ mentions: 6, sentiment:0.1 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'above_sma200_healthy' } },
+    { ticker:'TWLO', rank:15,top3:false, total_score:42, sma200_score:22, volume_score: 5, reddit_score: 7, news_score: 8, market:{ price: 68.40, change_day: 0.8, change_week: 2.3, dist_sma200: -6.2, above_sma200:false, vol_relative:1.1 }, reddit:{ mentions: 3, sentiment:0.1 }, news_count:{ ticker_matches:1, keyword_matches:1 }, components:{ sma200_detail:'below_sma200' } },
+    { ticker:'BABA', rank:16,top3:false, total_score:41, sma200_score:13, volume_score:10, reddit_score:10, news_score: 8, market:{ price: 84.20, change_day: 1.4, change_week: 3.1, dist_sma200:  8.4, above_sma200:true,  vol_relative:1.3 }, reddit:{ mentions: 5, sentiment:0.2 }, news_count:{ ticker_matches:1, keyword_matches:1 }, components:{ sma200_detail:'above_sma200_healthy' } },
+    { ticker:'AMZN', rank:17,top3:false, total_score:40, sma200_score:13, volume_score: 5, reddit_score:10, news_score:12, market:{ price:203.40, change_day: 0.9, change_week: 2.1, dist_sma200:  6.4, above_sma200:true,  vol_relative:0.8 }, reddit:{ mentions: 5, sentiment:0.2 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'above_sma200_healthy' } },
+    { ticker:'ASML', rank:18,top3:false, total_score:39, sma200_score:18, volume_score: 5, reddit_score: 5, news_score:11, market:{ price:762.10, change_day:-0.3, change_week: 1.2, dist_sma200:  3.4, above_sma200:true,  vol_relative:0.8 }, reddit:{ mentions: 2, sentiment:0.1 }, news_count:{ ticker_matches:2, keyword_matches:1 }, components:{ sma200_detail:'near_sma200' } },
+    { ticker:'MSFT', rank:19,top3:false, total_score:38, sma200_score:13, volume_score: 5, reddit_score:10, news_score:10, market:{ price:417.80, change_day: 0.3, change_week: 1.1, dist_sma200:  8.2, above_sma200:true,  vol_relative:0.9 }, reddit:{ mentions: 4, sentiment:0.2 }, news_count:{ ticker_matches:1, keyword_matches:1 }, components:{ sma200_detail:'above_sma200_healthy' } },
+    { ticker:'QCOM', rank:20,top3:false, total_score:38, sma200_score:18, volume_score: 5, reddit_score: 7, news_score: 8, market:{ price:152.30, change_day: 0.2, change_week: 0.4, dist_sma200:  2.1, above_sma200:true,  vol_relative:0.9 }, reddit:{ mentions: 3, sentiment:0.1 }, news_count:{ ticker_matches:1, keyword_matches:0 }, components:{ sma200_detail:'near_sma200' } },
+    { ticker:'CRM',  rank:21,top3:false, total_score:33, sma200_score:13, volume_score: 5, reddit_score: 7, news_score: 8, market:{ price:284.60, change_day: 0.7, change_week: 1.4, dist_sma200:  6.8, above_sma200:true,  vol_relative:0.8 }, reddit:{ mentions: 3, sentiment:0.1 }, news_count:{ ticker_matches:1, keyword_matches:0 }, components:{ sma200_detail:'above_sma200_healthy' } },
+    { ticker:'GOOGL',rank:22,top3:false, total_score:33, sma200_score:13, volume_score: 5, reddit_score: 7, news_score: 8, market:{ price:178.90, change_day: 0.6, change_week: 1.8, dist_sma200:  9.2, above_sma200:true,  vol_relative:0.7 }, reddit:{ mentions: 3, sentiment:0.1 }, news_count:{ ticker_matches:1, keyword_matches:0 }, components:{ sma200_detail:'above_sma200_healthy' } }
+  ]},
+  reddit: { count: 15, data: [
+    { ticker:'PLTR', mentions:22, net_sentiment:8,  sentiment_label:'BULL', trade_style:'SWING', subreddits:['wallstreetbets','stocks'], in_watchlist:true },
+    { ticker:'NVDA', mentions:18, net_sentiment:12, sentiment_label:'BULL', trade_style:'SWING', subreddits:['investing','stocks'],        in_watchlist:true },
+    { ticker:'TSLA', mentions:14, net_sentiment:2,  sentiment_label:'BULL', trade_style:'DAY',   subreddits:['wallstreetbets','teslainvestorsclub'], in_watchlist:true },
+    { ticker:'SMCI', mentions:12, net_sentiment:6,  sentiment_label:'BULL', trade_style:'SWING', subreddits:['stocks','investing'],        in_watchlist:true },
+    { ticker:'AMD',  mentions:11, net_sentiment:5,  sentiment_label:'BULL', trade_style:'SWING', subreddits:['stocks','AMD'],              in_watchlist:true },
+    { ticker:'INTC', mentions: 9, net_sentiment:-3, sentiment_label:'BEAR', trade_style:'MIXED', subreddits:['stocks','intel'],            in_watchlist:true },
+    { ticker:'MU',   mentions: 7, net_sentiment:4,  sentiment_label:'BULL', trade_style:'SWING', subreddits:['investing','stocks'],        in_watchlist:true },
+    { ticker:'META', mentions: 7, net_sentiment:3,  sentiment_label:'BULL', trade_style:'SWING', subreddits:['stocks','socialmedia'],      in_watchlist:true },
+    { ticker:'MRVL', mentions: 6, net_sentiment:3,  sentiment_label:'BULL', trade_style:'SWING', subreddits:['stocks','investing'],        in_watchlist:true },
+    { ticker:'AAPL', mentions: 6, net_sentiment:1,  sentiment_label:'BULL', trade_style:'MIXED', subreddits:['investing','apple'],         in_watchlist:true },
+    { ticker:'SPY',  mentions:20, net_sentiment:6,  sentiment_label:'BULL', trade_style:'DAY',   subreddits:['wallstreetbets','options'],  in_watchlist:false},
+    { ticker:'QQQ',  mentions:15, net_sentiment:4,  sentiment_label:'BULL', trade_style:'DAY',   subreddits:['wallstreetbets','stocks'],   in_watchlist:false},
+    { ticker:'COIN', mentions:11, net_sentiment:-2, sentiment_label:'BEAR', trade_style:'PUMP',  subreddits:['wallstreetbets','crypto'],   in_watchlist:false}
+  ]},
+  news: {
+    total_fetched: 87,
+    ticker_news: [
+      { title:'NVIDIA beats estimates with record datacenter revenue, raises outlook', source:'Reuters Business', link:'#', matched_tickers:['NVDA'], sentiment:'BULL' },
+      { title:'Super Micro Computer signs major AI server deal with hyperscaler', source:'CNBC Tech', link:'#', matched_tickers:['SMCI'], sentiment:'BULL' },
+      { title:'Broadcom AI chip sales surge 220% as hyperscalers ramp orders', source:'MarketWatch', link:'#', matched_tickers:['AVGO'], sentiment:'BULL' },
+      { title:'Palantir wins $500M US Army AI contract extension', source:'Reuters Business', link:'#', matched_tickers:['PLTR'], sentiment:'BULL' },
+      { title:'Intel announces further job cuts amid foundry restructuring plan', source:'Yahoo Finance', link:'#', matched_tickers:['INTC'], sentiment:'BEAR' },
+      { title:'AMD launches new MI325X GPU to compete with NVIDIA H200', source:'CNBC Tech', link:'#', matched_tickers:['AMD'], sentiment:'BULL' },
+      { title:'Micron reports strong HBM3E demand, raises Q2 guidance', source:'MarketWatch', link:'#', matched_tickers:['MU'], sentiment:'BULL' }
+    ],
+    market_news: [
+      { title:'Fed holds rates steady, signals two cuts possible in 2026 — Powell', source:'Reuters Business', link:'#', matched_keywords:['Fed','FOMC','interest rate'], sentiment:'BULL' },
+      { title:'S&P 500 hits fresh record as tech earnings beat expectations broadly', source:'CNBC Top News', link:'#', matched_keywords:['S&P 500','earnings','tech stocks'], sentiment:'BULL' },
+      { title:'US CPI comes in at 2.8%, slightly below consensus, market rallies', source:'AP Business', link:'#', matched_keywords:['CPI','inflation'], sentiment:'BULL' }
+    ]
+  },
+  history: {
+    days: 14,
+    tickers: {
+      NVDA: { trend:'HAUSSE', delta:12, scores:[{date:'2026-03-03',total_score:79},{date:'2026-03-04',total_score:82},{date:'2026-03-05',total_score:84},{date:'2026-03-06',total_score:86},{date:'2026-03-07',total_score:88},{date:'2026-03-08',total_score:89},{date:'2026-03-09',total_score:91}] },
+      SMCI: { trend:'HAUSSE', delta: 8, scores:[{date:'2026-03-03',total_score:77},{date:'2026-03-04',total_score:79},{date:'2026-03-05',total_score:80},{date:'2026-03-06',total_score:82},{date:'2026-03-07',total_score:83},{date:'2026-03-08',total_score:84},{date:'2026-03-09',total_score:85}] },
+      AVGO: { trend:'STABLE', delta: 2, scores:[{date:'2026-03-03',total_score:76},{date:'2026-03-04',total_score:75},{date:'2026-03-05',total_score:77},{date:'2026-03-06',total_score:78},{date:'2026-03-07',total_score:77},{date:'2026-03-08',total_score:79},{date:'2026-03-09',total_score:78}] },
+      AMD:  { trend:'HAUSSE', delta:10, scores:[{date:'2026-03-03',total_score:61},{date:'2026-03-04',total_score:63},{date:'2026-03-05',total_score:65},{date:'2026-03-06',total_score:67},{date:'2026-03-07',total_score:68},{date:'2026-03-08',total_score:70},{date:'2026-03-09',total_score:71}] },
+      PLTR: { trend:'HAUSSE', delta:15, scores:[{date:'2026-03-03',total_score:55},{date:'2026-03-04',total_score:58},{date:'2026-03-05',total_score:61},{date:'2026-03-06',total_score:63},{date:'2026-03-07',total_score:66},{date:'2026-03-08',total_score:68},{date:'2026-03-09',total_score:70}] }
+    }
+  }
+};
+
+// ── Utilitaires ───────────────────────────────────────────────────────────
+
+const fmt    = function(n, d) { d = d == null ? 2 : d; return n != null ? Number(n).toFixed(d) : '—'; };
+const fmtPct = function(n) { return n != null ? (n > 0 ? '+' : '') + fmt(n) + '%' : '—'; };
+const chgClr = function(n) { return n > 0 ? '#10b981' : n < 0 ? '#ef4444' : '#64748b'; };
+const sntClr = function(s) { return s === 'BULL' ? '#10b981' : s === 'BEAR' ? '#ef4444' : '#f59e0b'; };
+const scrClr = function(s) { return s >= 70 ? '#10b981' : s >= 50 ? '#3b82f6' : s >= 30 ? '#f59e0b' : '#ef4444'; };
+
+const CHART_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'];
+const RANK_COLORS  = { 1: '#3b82f6', 2: '#8b5cf6', 3: '#10b981' };
+const STYLE_COLORS = { SWING: '#3b82f6', PUMP: '#ef4444', MIXED: '#f59e0b', DAY: '#8b5cf6' };
+
+// ── Composants de base ────────────────────────────────────────────────────
+
+function ScoreBar(props) {
+  var val = props.val || 0;
+  var max = props.max || 25;
+  var color = props.color || '#3b82f6';
+  return React.createElement('div', { className: 'strack' },
+    React.createElement('div', { className: 'sfill', style: { width: (val / max * 100) + '%', background: color } })
+  );
+}
+
+// ── Instrument Card ───────────────────────────────────────────────────────
+
+function InstrumentCard(props) {
+  var name = props.name;
+  var data = props.data || {};
+  var price = data.price;
+  var chg   = data.change;
+  var color = chgClr(chg);
+  var arrow = chg > 0 ? '▲' : chg < 0 ? '▼' : '—';
+  return (
+    <div className="card card-sm">
+      <div className="inst-name">{name}</div>
+      <div className="inst-price" style={{ color: price != null ? 'var(--text)' : 'var(--muted)' }}>
+        {price != null ? fmt(price) : '—'}
+      </div>
+      <div className="inst-chg" style={{ color: color }}>
+        {price != null ? arrow + ' ' + fmtPct(chg) : 'N/A'}
+      </div>
+    </div>
+  );
+}
+
+// ── Barre régime + verdict ────────────────────────────────────────────────
+
+function RegimeBar(props) {
+  var market = props.market || {};
+  var macro  = props.macro  || {};
+  var regime  = market.regime;
+  var score   = market.score;
+  var sizing  = market.sizing_recommendation;
+  var verdict = macro.verdict;
+  var events  = macro.events || [];
+  var earnings = macro.earnings_today || [];
+
+  var verdictCls = verdict === 'GO' ? 'b-bull' : verdict === 'NO TRADE' ? 'b-bear' : 'b-neutral';
+
+  return (
+    <div className="card mb16 row wrap g12" style={{ padding: '10px 16px' }}>
+      {regime && (
+        <div className="row g8">
+          <span className="mc" style={{ fontSize: 10, letterSpacing: 1 }}>RÉGIME</span>
+          <span className={'rpill rp-' + regime}>{regime}</span>
+          {score != null && <span style={{ fontWeight: 700, color: sntClr(regime) }}>{score}/100</span>}
+        </div>
+      )}
+      {sizing && (
+        <div className="row g8">
+          <div className="vd" />
+          <span className="mc" style={{ fontSize: 10, letterSpacing: 1 }}>SIZING</span>
+          <span style={{ fontWeight: 700 }}>{sizing}</span>
+        </div>
+      )}
+      {verdict && (
+        <div className="row g8">
+          <div className="vd" />
+          <span className="mc" style={{ fontSize: 10, letterSpacing: 1 }}>VERDICT</span>
+          <span className={'badge ' + verdictCls}>{verdict}</span>
+          {macro.risque && <span className="mc" style={{ fontSize: 10 }}>{macro.risque}</span>}
+        </div>
+      )}
+      {events.length > 0 && (
+        <div className="row g6 wrap">
+          <div className="vd" />
+          <span className="mc" style={{ fontSize: 10, letterSpacing: 1 }}>EVENTS</span>
+          {events.map(function(e, i) {
+            return <span key={i} className={'badge ' + (e.impact === 'FORT' ? 'b-bear' : 'b-neutral')}>{e.name}</span>;
+          })}
+        </div>
+      )}
+      {earnings.length > 0 && (
+        <div className="row g6 wrap">
+          <div className="vd" />
+          <span className="mc" style={{ fontSize: 10, letterSpacing: 1 }}>EARNINGS</span>
+          {earnings.map(function(t) { return <span key={t} className="badge b-bear">{t}</span>; })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Top 3 ─────────────────────────────────────────────────────────────────
+
+function Top3Section(props) {
+  var tickers = props.tickers || [];
+  var top3 = tickers.filter(function(t) { return t.top3; });
+  if (!top3.length) return <div className="error-box mc">Pas encore de scores calculés</div>;
+
+  return (
+    <div className="g3 mb16">
+      {top3.map(function(t) {
+        var color = RANK_COLORS[t.rank] || '#64748b';
+        var m = t.market || {};
+        return (
+          <div key={t.ticker} className={'t3card r' + t.rank}>
+            <div className="t3bg">#{t.rank}</div>
+            <div className="rowb mb12">
+              <div>
+                <a href={'https://www.tradingview.com/chart/?symbol=' + t.ticker} target="_blank" rel="noopener"
+                   className="tv-link t3ticker" style={{ color: color }}>
+                  {t.ticker} 📈
+                </a>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                  {m.price != null ? '$' + fmt(m.price) : ''}
+                  {m.change_day != null && (
+                    <span style={{ color: chgClr(m.change_day), marginLeft: 6 }}>{fmtPct(m.change_day)}</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="t3score" style={{ color: color }}>{Math.round(t.total_score || 0)}</div>
+                <div className="t3lbl">/ 100</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gap: 5, marginBottom: 10 }}>
+              {[['SMA200', t.sma200_score], ['Volume', t.volume_score], ['Reddit', t.reddit_score], ['News', t.news_score]].map(function(pair) {
+                return (
+                  <div key={pair[0]} className="row g8">
+                    <span style={{ fontSize: 9, color: 'var(--muted)', width: 46 }}>{pair[0]}</span>
+                    <ScoreBar val={pair[1] || 0} color={color} />
+                    <span style={{ fontSize: 10, color: color, width: 18, textAlign: 'right' }}>{pair[1] || 0}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="row g6 wrap">
+              {m.dist_sma200 != null && (
+                <span className={'badge ' + (m.dist_sma200 < 0 ? 'b-bull' : 'b-accent')}>
+                  SMA200 {fmtPct(m.dist_sma200)}
+                </span>
+              )}
+              {m.vol_relative != null && m.vol_relative >= 1.5 && (
+                <span className="badge b-purple">VOL ×{fmt(m.vol_relative, 1)}</span>
+              )}
+              {t.reddit && t.reddit.mentions > 4 && (
+                <span className="badge b-accent">Reddit ×{t.reddit.mentions}</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Overview Tab ──────────────────────────────────────────────────────────
+
+function OverviewTab(props) {
+  var data = props.data;
+  var inst = (data.market && data.market.instruments) ? data.market.instruments : {};
+  var redditItems = (data.reddit && data.reddit.data) ? data.reddit.data.filter(function(r) { return r.in_watchlist; }).slice(0, 5) : [];
+  var newsItems = data.news ? [].concat(data.news.ticker_news || [], data.news.market_news || []).slice(0, 5) : [];
+
+  return (
+    <div>
+      <div className="stitle">INDICATEURS MARCHÉ</div>
+      <div className="g5 mb16">
+        <InstrumentCard name="S&amp;P 500"    data={inst.spy}   />
+        <InstrumentCard name="NASDAQ 100"     data={inst.qqq}   />
+        <InstrumentCard name="VIX"            data={inst.vix}   />
+        <InstrumentCard name="DOLLAR (DXY)"   data={inst.dxy}   />
+        <InstrumentCard name="US 10Y YIELD"   data={inst.us10y} />
+      </div>
+
+      <RegimeBar market={data.market} macro={data.macro} />
+
+      <div className="stitle">TOP 3 DU JOUR</div>
+      <Top3Section tickers={data.tickers ? data.tickers.tickers : []} />
+
+      <div className="g2">
+        <div>
+          <div className="stitle">REDDIT BUZZ (watchlist)</div>
+          <div className="card">
+            {redditItems.map(function(r) {
+              return (
+                <div key={r.ticker} className="rowb" style={{ padding: '7px 0', borderBottom: '1px solid rgba(30,41,59,.35)' }}>
+                  <div className="row g8">
+                    <span style={{ fontWeight: 700, width: 48 }}>{r.ticker}</span>
+                    <span className="mc" style={{ fontSize: 11 }}>{r.mentions} mentions</span>
+                  </div>
+                  <span className={'badge ' + (r.sentiment_label === 'BULL' ? 'b-bull' : r.sentiment_label === 'BEAR' ? 'b-bear' : 'b-neutral')}>{r.sentiment_label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <div className="stitle">NEWS RÉCENTES</div>
+          <div className="card">
+            {newsItems.map(function(n, i) {
+              return (
+                <div key={i} style={{ padding: '7px 0', borderBottom: '1px solid rgba(30,41,59,.35)' }}>
+                  <div className="row g6 mb8" style={{ alignItems: 'flex-start' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: sntClr(n.sentiment), flexShrink: 0, marginTop: 3 }} />
+                    <span style={{ fontSize: 11, lineHeight: 1.5 }}>{n.title}</span>
+                  </div>
+                  <div className="row g6" style={{ paddingLeft: 14 }}>
+                    <span className="mc" style={{ fontSize: 10 }}>{n.source}</span>
+                    {(n.matched_tickers || []).slice(0, 2).map(function(t) {
+                      return <span key={t} className="badge b-accent" style={{ fontSize: 9, padding: '1px 5px' }}>{t}</span>;
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Watchlist Tab ─────────────────────────────────────────────────────────
+
+function WatchlistTab(props) {
+  var tickers = (props.data.tickers && props.data.tickers.tickers) ? props.data.tickers.tickers : [];
+  var expanded = useState(null);
+  var openRow = expanded[0];
+  var setOpen = expanded[1];
+
+  function toggle(tk) { setOpen(openRow === tk ? null : tk); }
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <table className="tbl">
+        <thead>
+          <tr>
+            <th style={{ width: 36 }}>#</th>
+            <th>Ticker</th>
+            <th>Prix</th>
+            <th>Jour %</th>
+            <th>Sem. %</th>
+            <th>SMA200</th>
+            <th>Volume</th>
+            <th style={{ textAlign: 'right', paddingRight: 16 }}>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tickers.map(function(t) {
+            var m = t.market || {};
+            var col = t.top3 ? (RANK_COLORS[t.rank] || null) : null;
+            var isOpen = openRow === t.ticker;
+            return [
+              <tr key={t.ticker} onClick={function() { toggle(t.ticker); }} style={{ cursor: 'pointer', background: isOpen ? 'rgba(30,41,59,.25)' : undefined }}>
+                <td style={{ borderLeft: col ? '3px solid ' + col : '3px solid transparent' }}>
+                  <span className="mc">{t.rank}</span>
+                </td>
+                <td>
+                  <div className="row g6">
+                    <a href={'https://www.tradingview.com/chart/?symbol=' + t.ticker} target="_blank" rel="noopener"
+                       className="tv-link" style={{ color: col || '#3b82f6' }}
+                       onClick={function(e) { e.stopPropagation(); }}>
+                      {t.ticker}
+                    </a>
+                    {t.top3 && <span style={{ fontSize: 9, color: col }}>★</span>}
+                    <a href={'https://www.tradingview.com/chart/?symbol=' + t.ticker} target="_blank" rel="noopener"
+                       style={{ fontSize: 11, textDecoration: 'none', lineHeight: 1 }}
+                       onClick={function(e) { e.stopPropagation(); }}>📈</a>
+                  </div>
+                </td>
+                <td>{m.price != null ? '$' + fmt(m.price) : '—'}</td>
+                <td><span style={{ color: chgClr(m.change_day) }}>{fmtPct(m.change_day)}</span></td>
+                <td><span style={{ color: chgClr(m.change_week) }}>{fmtPct(m.change_week)}</span></td>
+                <td>
+                  {m.dist_sma200 != null
+                    ? <span style={{ color: m.above_sma200 ? 'var(--bull)' : 'var(--neutral)' }}>{m.above_sma200 ? '✓' : '▽'} {fmtPct(m.dist_sma200)}</span>
+                    : <span className="mc">—</span>
+                  }
+                </td>
+                <td>
+                  <div className="row g6">
+                    {m.vol_relative != null
+                      ? <span style={{ color: m.vol_relative >= 1.5 ? 'var(--purple)' : m.vol_relative >= 1.2 ? 'var(--accent)' : 'var(--muted)' }}>×{fmt(m.vol_relative, 1)}</span>
+                      : <span className="mc">—</span>
+                    }
+                    {m.vol_relative != null && m.vol_relative > 2.0 && (
+                      <span className="badge b-bear badge-hot" style={{ fontSize: 9, padding: '1px 5px' }}>🔥 HOT</span>
+                    )}
+                  </div>
+                </td>
+                <td style={{ textAlign: 'right', paddingRight: 16 }}>
+                  <div className="score-cell">
+                    <div className="score-bar-bg" style={{ width: (t.total_score || 0) + '%', background: scrClr(t.total_score || 0) + '30' }} />
+                    <span style={{ position: 'relative', fontWeight: 700, color: scrClr(t.total_score || 0), fontSize: 12 }}>{Math.round(t.total_score || 0)}</span>
+                  </div>
+                </td>
+              </tr>,
+              isOpen && (
+                <tr key={t.ticker + '-x'} className="xrow">
+                  <td colSpan={8}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: 1, marginBottom: 10 }}>SOUS-SCORES / 25</div>
+                        {[['SMA200', t.sma200_score, '#10b981'], ['Volume', t.volume_score, '#3b82f6'], ['Reddit', t.reddit_score, '#8b5cf6'], ['News', t.news_score, '#f59e0b']].map(function(p) {
+                          return (
+                            <div key={p[0]} className="row g8" style={{ marginBottom: 7 }}>
+                              <span style={{ fontSize: 10, color: 'var(--muted)', width: 68 }}>{p[0]}</span>
+                              <ScoreBar val={p[1] || 0} color={p[2]} />
+                              <span style={{ fontSize: 11, fontWeight: 700, color: p[2], width: 26, textAlign: 'right' }}>{p[1] || 0}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: 1, marginBottom: 10 }}>DÉTAILS</div>
+                        {m.sma200 && <div style={{ fontSize: 11, marginBottom: 5 }}><span className="mc">SMA200 : </span>${fmt(m.sma200)} ({fmtPct(m.dist_sma200)}) {m.above_sma200 ? '✓' : '▽'}</div>}
+                        {t.reddit && t.reddit.mentions > 0 && <div style={{ fontSize: 11, marginBottom: 5 }}><span className="mc">Reddit : </span>{t.reddit.mentions} mentions</div>}
+                        {t.news_count && <div style={{ fontSize: 11 }}><span className="mc">News : </span>{t.news_count.ticker_matches} ticker + {t.news_count.keyword_matches} keyword</div>}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )
+            ];
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Reddit Tab ────────────────────────────────────────────────────────────
+
+function RedditTab(props) {
+  var items = (props.data.reddit && props.data.reddit.data) ? props.data.reddit.data : [];
+  var totalMent = items.reduce(function(s, r) { return s + r.mentions; }, 0);
+  var netSent   = items.reduce(function(s, r) { return s + r.net_sentiment; }, 0);
+  var active    = items.filter(function(r) { return r.mentions > 0; }).length;
+
+  var chartData = items.slice(0, 12).map(function(r) {
+    return { ticker: r.ticker, mentions: r.mentions, fill: sntClr(r.sentiment_label) };
+  });
+
+  return (
+    <div>
+      <div className="g3 mb16">
+        <div className="metric"><div className="mval ac">{totalMent}</div><div className="mlbl">Total Mentions</div></div>
+        <div className="metric"><div className="mval" style={{ color: netSent > 0 ? 'var(--bull)' : 'var(--bear)' }}>{netSent > 0 ? '+' : ''}{netSent}</div><div className="mlbl">Sentiment Net</div></div>
+        <div className="metric"><div className="mval pc">{active}</div><div className="mlbl">Tickers Actifs</div></div>
+      </div>
+
+      <div className="card mb16">
+        <div className="stitle" style={{ marginBottom: 14 }}>MENTIONS PAR TICKER</div>
+        <ResponsiveContainer width="100%" height={190}>
+          <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <XAxis dataKey="ticker" tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ background: '#111827', border: '1px solid #1e293b', borderRadius: 6, fontFamily: 'JetBrains Mono', fontSize: 11 }} />
+            <Bar dataKey="mentions" radius={[3, 3, 0, 0]}>
+              {chartData.map(function(d, i) { return <Cell key={i} fill={d.fill} />; })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <table className="tbl">
+          <thead>
+            <tr><th>Ticker</th><th>Mentions</th><th>Sentiment</th><th>Style</th><th>Subreddits</th></tr>
+          </thead>
+          <tbody>
+            {items.map(function(r) {
+              var sc = STYLE_COLORS[r.trade_style] || '#64748b';
+              return (
+                <tr key={r.ticker}>
+                  <td>
+                    <div className="row g6">
+                      <span style={{ fontWeight: 700, color: r.in_watchlist ? 'var(--text)' : 'var(--muted)' }}>
+                        {r.ticker}{r.in_watchlist && <span style={{ marginLeft: 5, fontSize: 9, color: 'var(--accent)' }}>●</span>}
+                      </span>
+                      <a href={'https://www.reddit.com/r/stocks/search/?q=' + r.ticker} target="_blank" rel="noopener"
+                         style={{ fontSize: 10, textDecoration: 'none', color: 'var(--muted)' }}
+                         title="Chercher sur Reddit">🔍</a>
+                    </div>
+                  </td>
+                  <td><span style={{ fontWeight: 600 }}>{r.mentions}</span></td>
+                  <td>
+                    <span style={{ color: sntClr(r.sentiment_label), fontWeight: 600 }}>{r.net_sentiment > 0 ? '+' : ''}{r.net_sentiment}</span>
+                    <span className="mc" style={{ marginLeft: 6, fontSize: 10 }}>{r.sentiment_label}</span>
+                  </td>
+                  <td>
+                    {r.trade_style && r.trade_style !== '?'
+                      ? <span className="badge" style={{ background: sc + '20', color: sc, border: '1px solid ' + sc + '40' }}>{r.trade_style}</span>
+                      : <span className="mc">—</span>
+                    }
+                  </td>
+                  <td><span className="mc" style={{ fontSize: 11 }}>{(r.subreddits || []).slice(0, 3).join(', ') || '—'}</span></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── News Tab ──────────────────────────────────────────────────────────────
+
+function NewsTab(props) {
+  var news = props.data.news || {};
+  var tn = news.ticker_news || [];
+  var mn = news.market_news || [];
+  var total = news.total_fetched || 0;
+
+  function NewsItem(p) {
+    var n = p.n;
+    return (
+      <div className="nitem">
+        <div className="row g6" style={{ marginBottom: 5, alignItems: 'flex-start' }}>
+          <span style={{ width: 9, height: 9, borderRadius: '50%', background: sntClr(n.sentiment || 'NEUTRAL'), flexShrink: 0, marginTop: 3 }} />
+          <a href={n.link || '#'} target="_blank" rel="noopener" className="news-link">
+            {n.title}
+          </a>
+        </div>
+        <div className="row g6 wrap" style={{ paddingLeft: 15 }}>
+          <span className="mc" style={{ fontSize: 10 }}>{n.source}</span>
+          <span className={'badge ' + (n.sentiment === 'BULL' ? 'b-bull' : n.sentiment === 'BEAR' ? 'b-bear' : 'b-neutral')} style={{ fontSize: 9, padding: '1px 5px' }}>{n.sentiment || 'NEUTRAL'}</span>
+          {(n.matched_tickers || []).map(function(t) {
+            return <span key={t} className="badge b-accent" style={{ fontSize: 9, padding: '1px 5px' }}>{t}</span>;
+          })}
+          {(n.matched_keywords || []).slice(0, 2).map(function(k, i) {
+            return <span key={i} className="badge b-muted" style={{ fontSize: 9, padding: '1px 5px' }}>{k}</span>;
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="row g12 mb16 wrap">
+        {[{val:tn.length,lbl:'News Tickers',sub:'Match ticker',color:'var(--accent)'},
+          {val:mn.length,lbl:'News Macro',  sub:'Keywords',   color:'var(--neutral)'},
+          {val:total,    lbl:'Total',       sub:'Flux RSS',    color:'var(--muted)'}].map(function(c) {
+          return (
+            <div key={c.lbl} className="card card-sm row g12" style={{ flex: 1, minWidth: 150 }}>
+              <span style={{ fontSize: 26, fontWeight: 700, color: c.color }}>{c.val}</span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 12 }}>{c.lbl}</div>
+                <div className="mc" style={{ fontSize: 10, marginTop: 2 }}>{c.sub}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {tn.length > 0 && (
+        <div className="mb16">
+          <div className="stitle">NEWS TICKERS</div>
+          <div className="card">{tn.map(function(n, i) { return <NewsItem key={i} n={n} />; })}</div>
+        </div>
+      )}
+      {mn.length > 0 && (
+        <div>
+          <div className="stitle">NEWS MACRO</div>
+          <div className="card">{mn.map(function(n, i) { return <NewsItem key={i} n={n} />; })}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── History Tab ───────────────────────────────────────────────────────────
+
+function HistoryTab(props) {
+  var hist = props.data.history || {};
+  var htickers = hist.tickers || {};
+  var tkNames = Object.keys(htickers);
+
+  var chartData = useMemo(function() {
+    var dateMap = {};
+    tkNames.forEach(function(tk) {
+      var scores = htickers[tk].scores || [];
+      scores.forEach(function(e) {
+        if (!dateMap[e.date]) dateMap[e.date] = { date: e.date };
+        dateMap[e.date][tk] = e.total_score;
+      });
+    });
+    return Object.values(dateMap).sort(function(a, b) { return a.date < b.date ? -1 : 1; });
+  }, []);
+
+  var fmtD = function(d) { return d ? d.slice(5).replace('-', '/') : ''; };
+
+  if (!tkNames.length) {
+    return <div className="card"><div className="mc" style={{ padding: 20, textAlign: 'center' }}>Aucun historique disponible</div></div>;
+  }
+
+  return (
+    <div>
+      <div className="row g8 wrap mb16">
+        {tkNames.map(function(tk) {
+          var t = htickers[tk];
+          var trendCls = t.trend === 'HAUSSE' ? 'b-bull' : t.trend === 'BAISSE' ? 'b-bear' : 'b-muted';
+          var arrow = t.trend === 'HAUSSE' ? '↑' : t.trend === 'BAISSE' ? '↓' : '→';
+          return (
+            <div key={tk} className="card card-sm row g8" style={{ padding: '7px 12px' }}>
+              <span style={{ fontWeight: 700 }}>{tk}</span>
+              <span className={'badge ' + trendCls}>{arrow} {t.delta > 0 ? '+' : ''}{t.delta}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="card">
+        <div className="stitle" style={{ marginBottom: 14 }}>ÉVOLUTION DES SCORES — {hist.days || 14} DERNIERS JOURS</div>
+        <ResponsiveContainer width="100%" height={320}>
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <defs>
+              {tkNames.map(function(tk, i) {
+                var c = CHART_COLORS[i % CHART_COLORS.length];
+                return (
+                  <linearGradient key={tk} id={'grad' + i} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={c} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={c} stopOpacity={0}    />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey="date" tickFormatter={fmtD} tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+            <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ background: '#111827', border: '1px solid #1e293b', borderRadius: 6, fontFamily: 'JetBrains Mono', fontSize: 11 }} />
+            <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12, fontFamily: 'JetBrains Mono' }} />
+            {tkNames.map(function(tk, i) {
+              var c = CHART_COLORS[i % CHART_COLORS.length];
+              return (
+                <Area key={tk} type="monotone" dataKey={tk}
+                  stroke={c} strokeWidth={2} fill={'url(#grad' + i + ')'}
+                  connectNulls={true} dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                />
+              );
+            })}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+// ── App principal ─────────────────────────────────────────────────────────
+
+// ── Alerts Tab ────────────────────────────────────────────────────────────
+
+function AlertsTab(props) {
+  var alertData    = props.alertData  || {};
+  var liveNews     = props.liveNews   || [];
+  var countdown    = props.countdown  || null;
+  var testMode     = props.testMode   || false;
+  var onSimulate   = props.onSimulate || function() {};
+  var inKZ         = !!alertData.in_killzone;
+  var alerts       = alertData.alerts || [];
+  var nextKZ       = alertData.next_killzone || '—';
+
+  // Filtrer les news des 30 dernières minutes
+  var now30 = Date.now() - 30 * 60 * 1000;
+  var recentNews = liveNews.filter(function(n) {
+    if (!n.fetched_at) return true;   // garder si pas de timestamp
+    return new Date(n.fetched_at).getTime() >= now30;
+  });
+
+  var sevColor = function(s) { return s === 'HIGH' ? '#ef4444' : s === 'MEDIUM' ? '#f59e0b' : '#475569'; };
+
+  return (
+    <div>
+      {/* Statut killzone */}
+      <div className="card mb16" style={{ padding: '14px 18px' }}>
+        <div className="rowb">
+          <div className="row g12">
+            {testMode
+              ? <span className="kz-live" style={{ background: 'rgba(249,115,22,.15)', color: '#f97316', borderColor: 'rgba(249,115,22,.4)' }}>🧪 TEST MODE actif</span>
+              : inKZ
+                ? <span className="kz-live">🔴 LIVE 14h30-16h30 CET</span>
+                : <span className="kz-off">⏸️ Hors killzone</span>
+            }
+            {(inKZ || testMode) && countdown !== null && (
+              <span className="mc" style={{ fontSize: 11 }}>Prochain scan dans : <span style={{ color: 'var(--text)', fontWeight: 700 }}>{countdown}s</span></span>
+            )}
+          </div>
+          {alertData.scanned_at && (
+            <span className="mc" style={{ fontSize: 10 }}>Scanné à {alertData.scanned_at}</span>
+          )}
+        </div>
+        {!inKZ && !testMode && (
+          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--muted)' }}>
+            Prochaine session : <span style={{ color: 'var(--text)', fontWeight: 600 }}>{nextKZ}</span>
+            <div style={{ marginTop: 6, color: '#475569' }}>En attendant, analyse tes Setup Candidates sur TradingView 📈</div>
+            <div style={{ marginTop: 10 }}>
+              <button onClick={onSimulate} style={{ background: 'transparent', border: '1px solid #334155', color: '#94a3b8', borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                🧪 Simuler killzone
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Alertes */}
+      <div className="stitle">ALERTES INTRADAY</div>
+      {alerts.length === 0
+        ? <div className="card mc" style={{ textAlign: 'center', padding: 24, fontSize: 12 }}>
+            {inKZ ? 'Aucune alerte pour le moment — scan en cours...' : 'Les alertes apparaîtront pendant la killzone (14h30-16h30 CET)'}
+          </div>
+        : <div style={{ marginBottom: 16 }}>
+            {alerts.map(function(a, i) {
+              return (
+                <div key={i} className={'alert-item alert-' + a.severity}>
+                  <div className="rowb">
+                    <div className="row g8" style={{ flex: 1 }}>
+                      <a href={'https://www.tradingview.com/chart/?symbol=' + a.ticker} target="_blank" rel="noopener"
+                         className="tv-link" style={{ color: sevColor(a.severity), fontSize: 12, minWidth: 42 }}>
+                        {a.ticker}
+                      </a>
+                      <span style={{ fontSize: 12, color: 'var(--text)' }}>{a.message}</span>
+                    </div>
+                    <div className="row g8">
+                      <span className="badge" style={{ background: sevColor(a.severity) + '20', color: sevColor(a.severity), border: '1px solid ' + sevColor(a.severity) + '40', fontSize: 9 }}>{a.severity}</span>
+                      <span className="mc" style={{ fontSize: 10 }}>{a.timestamp}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+      }
+
+      {/* Breaking News 30 min */}
+      <div>
+        <div className="stitle">⚡ BREAKING NEWS (30 MIN)</div>
+        {recentNews.length === 0
+          ? <div className="card mc" style={{ textAlign: 'center', padding: 18, fontSize: 12 }}>Pas de breaking news</div>
+          : <div className="card">
+              {recentNews.map(function(n, i) {
+                var sc = n.sentiment === 'BULL' ? '#10b981' : n.sentiment === 'BEAR' ? '#ef4444' : '#f59e0b';
+                var arrivalTime = n.fetched_at ? new Date(n.fetched_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+                return (
+                  <div key={i} style={{ padding: '8px 0', borderBottom: i < recentNews.length - 1 ? '1px solid rgba(30,41,59,.4)' : 'none' }}>
+                    <div className="row g6" style={{ alignItems: 'flex-start', marginBottom: 4 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: sc, flexShrink: 0, marginTop: 3 }} />
+                      <a href={n.link || '#'} target="_blank" rel="noopener" className="news-link">{n.title}</a>
+                    </div>
+                    <div className="row g6 wrap" style={{ paddingLeft: 14 }}>
+                      <span className="mc" style={{ fontSize: 10 }}>{n.source}</span>
+                      {arrivalTime && <span className="mc" style={{ fontSize: 10 }}>à {arrivalTime}</span>}
+                      {(n.matched_tickers || []).slice(0, 2).map(function(t) {
+                        return <span key={t} className="badge b-accent" style={{ fontSize: 9, padding: '1px 5px' }}>{t}</span>;
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+        }
+      </div>
+    </div>
+  );
+}
+
+var TABS = [
+  { id: 'overview',  label: '📊 Vue d\'ensemble' },
+  { id: 'watchlist', label: '📈 Watchlist'        },
+  { id: 'reddit',    label: '🔴 Reddit'           },
+  { id: 'news',      label: '📰 News'             },
+  { id: 'alerts',    label: '⚡ Alertes'          },
+  { id: 'history',   label: '📅 Historique'       }
+];
+
+// Ref module-level pour éviter les stale closures dans setInterval
+var _testModeRef = { active: false, expiry: null };
+
+function TradingDashboard() {
+  var tabState  = useState('overview');
+  var tab       = tabState[0];
+  var setTab    = tabState[1];
+
+  var timeState = useState(new Date());
+  var time      = timeState[0];
+  var setTime   = timeState[1];
+
+  var dataState = useState(DEMO);
+  var data      = dataState[0];
+  var setData   = dataState[1];
+
+  var refreshMsgState = useState('idle');   // 'idle' | 'scanning' | 'done:Xs' | 'error'
+  var refreshMsg      = refreshMsgState[0];
+  var setRefreshMsg   = refreshMsgState[1];
+  var loading         = refreshMsg === 'scanning';
+
+  var lastUpdState = useState(null);
+  var lastUpd      = lastUpdState[0];
+  var setLastUpd   = lastUpdState[1];
+
+  var alertDataState  = useState({ in_killzone: false, alerts: [], next_killzone: '—', scanned_at: null });
+  var alertData       = alertDataState[0];
+  var setAlertData    = alertDataState[1];
+
+  var liveNewsState   = useState([]);
+  var liveNews        = liveNewsState[0];
+  var setLiveNews     = liveNewsState[1];
+
+  var unreadState     = useState(0);
+  var unread          = unreadState[0];
+  var setUnread       = unreadState[1];
+
+  var countdownState  = useState(null);
+  var countdown       = countdownState[0];
+  var setCountdown    = countdownState[1];
+
+  var testModeState   = useState(false);
+  var testMode        = testModeState[0];
+  var setTestMode     = testModeState[1];
+
+  var testExpiryState = useState(null);   // timestamp ms d'expiration du test mode
+  var testExpiry      = testExpiryState[0];
+  var setTestExpiry   = testExpiryState[1];
+
+  useEffect(function() {
+    // Charger chaque endpoint indépendamment — mise à jour dès réception, timeout 15s
+    var eps = ['market', 'tickers', 'reddit', 'news', 'macro', 'history'];
+    eps.forEach(function(ep) {
+      var ctrl = new AbortController();
+      var tid  = setTimeout(function() { ctrl.abort(); }, 15000);
+      fetch('/api/' + ep, { signal: ctrl.signal })
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          clearTimeout(tid);
+          setData(function(prev) {
+            var next = Object.assign({}, prev);
+            next[ep] = json;
+            return next;
+          });
+          setLastUpd(new Date());
+        })
+        .catch(function() { clearTimeout(tid); /* garde données démo */ });
+    });
+
+    // Horloge
+    var clk = setInterval(function() { setTime(new Date()); }, 1000);
+
+    // ── Alerts auto-refresh ──────────────────────────────────────────────
+    var ALERT_INTERVAL  = 5 * 60;   // 5 min en secondes
+    var NEWS_INTERVAL   = 15 * 60;  // 15 min en secondes
+    var alertTick       = ALERT_INTERVAL;
+    var newsTick        = NEWS_INTERVAL;
+
+    function fetchAlerts(force) {
+      var url = force ? '/api/alerts?force=true' : '/api/alerts';
+      fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          setAlertData(function(prev) {
+            var prevCount = (prev.alerts || []).length;
+            var newCount  = (json.alerts || []).length;
+            if (newCount > prevCount) {
+              setUnread(function(u) { return u + (newCount - prevCount); });
+            }
+            return json;
+          });
+        })
+        .catch(function() {});
+    }
+
+    function fetchAlertNews() {
+      fetch('/api/alerts/news')
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          if (json.new_news && json.new_news.length > 0) {
+            setLiveNews(function(prev) { return json.new_news.concat(prev).slice(0, 30); });
+            setUnread(function(u) { return u + json.new_news.length; });
+          }
+        })
+        .catch(function() {});
+    }
+
+    // Premier appel immédiat
+    fetchAlerts();
+    fetchAlertNews();
+
+    var alertTimer = setInterval(function() {
+      alertTick--;
+      newsTick--;
+      setCountdown(alertTick);
+      // Expiration du test mode (via ref pour éviter stale closure)
+      if (_testModeRef.active && _testModeRef.expiry && Date.now() >= _testModeRef.expiry) {
+        _testModeRef.active = false;
+        _testModeRef.expiry = null;
+        setTestMode(false);
+        setTestExpiry(null);
+      }
+      if (alertTick <= 0) {
+        fetchAlerts(_testModeRef.active);
+        alertTick = ALERT_INTERVAL;
+      }
+      if (newsTick <= 0) {
+        fetchAlertNews();
+        newsTick = NEWS_INTERVAL;
+      }
+    }, 1000);
+
+    return function() { clearInterval(clk); clearInterval(alertTimer); };
+  }, []);
+
+  function activateTestMode() {
+    var expiry = Date.now() + 5 * 60 * 1000;   // 5 min
+    _testModeRef.active = true;
+    _testModeRef.expiry = expiry;
+    setTestMode(true);
+    setTestExpiry(expiry);
+    fetch('/api/alerts?force=true')
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        setAlertData(function(prev) {
+          var prevCount = (prev.alerts || []).length;
+          var newCount  = (json.alerts || []).length;
+          if (newCount > prevCount) { setUnread(function(u) { return u + (newCount - prevCount); }); }
+          return json;
+        });
+      })
+      .catch(function() {});
+  }
+
+  function handleRefresh() {
+    if (loading) return;
+    setRefreshMsg('scanning');
+    fetch('/api/refresh', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        var dur = json.duration != null ? Math.round(json.duration) : '?';
+        // Recharger chaque endpoint indépendamment
+        var eps = ['market', 'tickers', 'reddit', 'news', 'macro', 'history'];
+        eps.forEach(function(ep) {
+          var ctrl = new AbortController();
+          var tid  = setTimeout(function() { ctrl.abort(); }, 15000);
+          fetch('/api/' + ep, { signal: ctrl.signal })
+            .then(function(r) { return r.json(); })
+            .then(function(edata) {
+              clearTimeout(tid);
+              setData(function(prev) { var n = Object.assign({}, prev); n[ep] = edata; return n; });
+              setLastUpd(new Date());
+            })
+            .catch(function() { clearTimeout(tid); });
+        });
+        setRefreshMsg('done:' + dur + 's');
+        setTimeout(function() { setRefreshMsg('idle'); }, 3000);
+      })
+      .catch(function() {
+        setRefreshMsg('error');
+        setTimeout(function() { setRefreshMsg('idle'); }, 3000);
+      });
+  }
+
+  var fmtTime = function(d) { return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
+  var fmtDate = function(d) { return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }); };
+
+  var regime  = data.market ? data.market.regime  : null;
+  var verdict = data.macro  ? data.macro.verdict   : null;
+  var verdictCls = verdict === 'GO' ? 'b-bull' : verdict === 'NO TRADE' ? 'b-bear' : 'b-neutral';
+
+  return (
+    <div className="app">
+      <header className="header">
+        <div>
+          <div className="header-title">SMC-AI MORNING BRIEF v2</div>
+          <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>{fmtDate(time)}</div>
+        </div>
+        <div className="header-right">
+          {regime  && <span className={'rpill rp-' + regime}>{regime}</span>}
+          {verdict && <span className={'badge ' + verdictCls}>{verdict}</span>}
+          {testMode
+            ? <span className="kz-live" style={{ background: 'rgba(249,115,22,.15)', color: '#f97316', borderColor: 'rgba(249,115,22,.4)' }}>🧪 TEST MODE</span>
+            : alertData.in_killzone
+              ? <span className="kz-live">🔴 LIVE 14h30-16h30</span>
+              : <span className="kz-off">⏸️ Hors session</span>
+          }
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>{fmtTime(time)}</span>
+          <button
+            className={'btn btn-scan' + (loading ? ' is-scanning' : '')}
+            onClick={handleRefresh}
+            disabled={loading}
+            style={refreshMsg === 'error' ? { color: '#ef4444', borderColor: '#ef4444' } : {}}
+          >
+            {loading
+              ? <span><span className="spin-anim">⟳</span> Scan en cours...</span>
+              : refreshMsg.startsWith('done:') ? ('✅ Scan terminé en ' + refreshMsg.slice(5))
+              : refreshMsg === 'error' ? '❌ Erreur'
+              : '🔄 Rafraîchir'}
+          </button>
+        </div>
+      </header>
+
+      <nav className="tabs" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex' }}>
+          {TABS.map(function(t) {
+            return (
+              <button key={t.id} className={'tab' + (tab === t.id ? ' active' : '')} onClick={function() {
+                setTab(t.id);
+                if (t.id === 'alerts') { setUnread(0); }
+              }}>
+                {t.label}
+                {t.id === 'alerts' && unread > 0 && (
+                  <span className="tab-badge">{unread > 9 ? '9+' : unread}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {lastUpd && (
+          <span className="mc" style={{ fontSize: 10, padding: '0 16px', flexShrink: 0 }}>
+            Dernière MAJ : {lastUpd.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+        )}
+      </nav>
+
+      <main className="content">
+        {tab === 'overview'  && <OverviewTab  data={data} />}
+        {tab === 'watchlist' && <WatchlistTab data={data} />}
+        {tab === 'reddit'    && <RedditTab    data={data} />}
+        {tab === 'news'      && <NewsTab      data={data} />}
+        {tab === 'alerts'    && <AlertsTab alertData={alertData} liveNews={liveNews} countdown={(alertData.in_killzone || testMode) ? countdown : null} testMode={testMode} onSimulate={activateTestMode} />}
+        {tab === 'history'   && <HistoryTab   data={data} />}
+      </main>
+      <footer style={{ padding: '8px 24px', borderTop: '1px solid var(--border)', background: 'var(--card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span className="mc" style={{ fontSize: 10 }}>Données live — Killzone 14h30-16h30 CET</span>
+        <span className="mc" style={{ fontSize: 10 }}>SMC-AI Trading Agent v2</span>
+      </footer>
+    </div>
+  );
+}
+
+// ── Rendu ─────────────────────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('root')).render(
+  React.createElement(TradingDashboard, null)
+);
+</script>
+</body>
+</html>
