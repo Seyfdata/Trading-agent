@@ -7,6 +7,7 @@
 feedparser==6.0.11       # Lecture des flux RSS
 requests>=2.31.0         # Appels HTTP (Telegram, API)
 python-dotenv>=1.0.0     # Lire le fichier .env
+pyyaml>=6.0.1            # Lecture de config/config.yaml
 
 # --- Phase 2+ : Claude API ---
 # Décommenter quand tu auras une clé API Anthropic :

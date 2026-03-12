@@ -13,6 +13,7 @@ Endpoints :
     GET  /api/history      — historique des scores (14j)
     GET  /api/alerts       — alertes killzone intraday
     GET  /api/alerts/news  — nouvelles news depuis le dernier appel
+    GET  /api/postmarket   — résumé post-market (top gainers/losers, marché, alertes)
     POST /api/refresh      — lance un scan complet en arrière-plan
 """
 
@@ -496,6 +497,9 @@ def refresh():
 # Set en mémoire pour dédupliquer les news déjà vues
 _seen_news_titles: set = set()
 
+# Alertes déclenchées pendant la killzone du jour courant (dédupliquées type+ticker)
+_today_alerts: list = []
+
 
 def _is_killzone() -> bool:
     """True si on est lundi-vendredi entre 14h30 et 16h30 CET (UTC+1/UTC+2)."""
@@ -642,6 +646,14 @@ def get_alerts(force: bool = False):
             })
 
         alerts = _scan_alerts()
+        # Enregistrer les nouvelles alertes du jour (dédupliquées par type+ticker)
+        _alert_date = datetime.now().strftime("%Y-%m-%d")
+        _seen_keys = {(a.get("type"), a.get("ticker")) for a in _today_alerts}
+        for _a in alerts:
+            _k = (_a.get("type"), _a.get("ticker"))
+            if _k not in _seen_keys:
+                _today_alerts.append({"date": _alert_date, "type": _a.get("type"), "ticker": _a.get("ticker")})
+                _seen_keys.add(_k)
         return clean_for_json({
             "in_killzone": True,
             "test_mode": bool(force),
@@ -687,6 +699,87 @@ def get_alerts_news():
         return {"new_news": [], "total_checked": 0, "error": str(e)}
 
 
+# ── Post-market summary ───────────────────────────────────────────────────────
+
+@app.get("/api/postmarket")
+def get_postmarket():
+    """Résumé post-market : top 3 gainers/losers, volume, alertes killzone du jour."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    _empty = {
+        "date": today,
+        "top_gainers": [], "top_losers": [], "summary": [],
+        "market_close": {}, "killzone_alerts_count": 0,
+    }
+    try:
+        import yfinance as yf
+    except ImportError:
+        return clean_for_json(dict(_empty, error="yfinance non installé"))
+
+    try:
+        results = []
+        for ticker in WATCHLIST:
+            try:
+                tk   = yf.Ticker(ticker)
+                hist = tk.history(period="30d", interval="1d", auto_adjust=True)
+                if hist.empty or len(hist) < 2:
+                    continue
+                last       = hist.iloc[-1]
+                prev       = hist.iloc[-2]
+                close      = float(last["Close"])
+                prev_close = float(prev["Close"])
+                vol_today  = float(last["Volume"])
+                avg_vol_20 = float(hist["Volume"].tail(20).mean()) if len(hist) >= 20 else vol_today
+                chg_pct    = (close - prev_close) / prev_close * 100 if prev_close else 0.0
+                vol_ratio  = vol_today / avg_vol_20 if avg_vol_20 > 0 else 1.0
+                results.append({
+                    "ticker":    ticker,
+                    "close":     round(close, 2),
+                    "change_pct": round(chg_pct, 2),
+                    "vol_ratio": round(vol_ratio, 2),
+                    "alert_triggered": any(
+                        a.get("ticker") == ticker and a.get("date") == today
+                        for a in _today_alerts
+                    ),
+                })
+            except Exception:
+                continue
+
+        if not results:
+            return clean_for_json(dict(_empty, error="aucune donnée yfinance"))
+
+        sorted_chg  = sorted(results, key=lambda x: x["change_pct"], reverse=True)
+        top_gainers = sorted_chg[:3]
+        top_losers  = list(reversed(sorted_chg[-3:]))
+
+        # SPY / QQQ / VIX close
+        market_close = {}
+        for sym, key in [("SPY", "spy"), ("QQQ", "qqq"), ("^VIX", "vix")]:
+            try:
+                h = yf.Ticker(sym).history(period="5d", interval="1d", auto_adjust=True)
+                if not h.empty and len(h) >= 2:
+                    c = float(h["Close"].iloc[-1])
+                    p = float(h["Close"].iloc[-2])
+                    market_close[key] = {"price": round(c, 2), "change_pct": round((c - p) / p * 100, 2)}
+                else:
+                    market_close[key] = {"price": None, "change_pct": None}
+            except Exception:
+                market_close[key] = {"price": None, "change_pct": None}
+
+        kz_count = len([a for a in _today_alerts if a.get("date") == today])
+
+        return clean_for_json({
+            "date":                    today,
+            "top_gainers":             top_gainers,
+            "top_losers":              top_losers,
+            "summary":                 sorted_chg,
+            "market_close":            market_close,
+            "killzone_alerts_count":   kz_count,
+        })
+
+    except Exception as e:
+        return clean_for_json(dict(_empty, error=str(e)))
+
+
 # ── Test page ─────────────────────────────────────────────────────────────────
 
 @app.get("/test", response_class=HTMLResponse)
@@ -724,5 +817,6 @@ def root():
             "GET  /api/macro",
             "GET  /api/history",
             "POST /api/refresh",
+            "GET  /api/postmarket",
         ],
     }

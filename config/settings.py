@@ -2,77 +2,28 @@
 Configuration centralisée du Trading Agent.
 Les valeurs sensibles (clés API) sont dans .env
 Ici on met les paramètres de trading et les listes.
+
+Les valeurs WATCHLIST, TICKER_ALIASES et les règles de trading sont chargées
+depuis config/config.yaml si ce fichier existe, sinon les valeurs en dur
+ci-dessous servent de fallback.
 """
 
+from config.loader import (
+    get_watchlist,
+    get_aliases,
+    get_killzone,
+    get_trading_rules,
+    get_dashboard_config,
+)
+
 # === WATCHLIST ===
-# Actions que tu surveilles activement
-WATCHLIST = [
-    "AAPL",   # Apple
-    "NVDA",   # Nvidia
-    "TSLA",   # Tesla
-    "MSFT",   # Microsoft
-    "META",   # Meta (Facebook)
-    "AMZN",   # Amazon
-    "GOOGL",  # Alphabet
-    "AMD",    # AMD
-    "AVGO",   # Broadcom
-    "QCOM",   # Qualcomm
-    "INTC",   # Intel
-    "PLTR",   # Palantir
-    "SMCI",   # Super Micro Computer
-    "MU",     # Micron
-    "ASML",   # ASML Holdings
-    "TWLO",   # Twilio
-    "BABA",   # Alibaba
-    "ZS",     # Zscaler
-    "MRVL",   # Marvell Technology
-    "CRM",    # Salesforce
-    "SNOW",   # Snowflake
-    "TSM",    # TSMC
-]
+# Chargée depuis config.yaml (fallback : valeurs en dur ci-dessous)
+WATCHLIST = get_watchlist()
 
 # Noms complets et aliases pour capter les news qui n'utilisent pas le ticker
 # Format : "nom dans l'article" → "ticker affiché dans le rapport"
-TICKER_ALIASES = {
-    # Magnificent 7
-    "Apple": "AAPL",
-    "iPhone": "AAPL",
-    "Nvidia": "NVDA",
-    "GeForce": "NVDA",
-    "Tesla": "TSLA",
-    "Elon Musk": "TSLA",
-    "Microsoft": "MSFT",
-    "Azure": "MSFT",
-    "Meta Platforms": "META",
-    "Facebook": "META",
-    "Instagram": "META",
-    "Zuckerberg": "META",
-    "Amazon": "AMZN",
-    "AWS": "AMZN",
-    "Alphabet": "GOOGL",
-    "Google": "GOOGL",
-    # Semi-conducteurs
-    "Advanced Micro": "AMD",
-    "Broadcom": "AVGO",
-    "Qualcomm": "QCOM",
-    "Snapdragon": "QCOM",
-    # Nouveaux tickers
-    "Intel": "INTC",
-    "Palantir": "PLTR",
-    "Super Micro": "SMCI",
-    "SuperMicro": "SMCI",
-    "Micron": "MU",
-    "ASML": "ASML",
-    "Twilio": "TWLO",
-    "Alibaba": "BABA",
-    "Jack Ma": "BABA",
-    "Zscaler": "ZS",
-    "Marvell": "MRVL",
-    "Salesforce": "CRM",
-    "Snowflake": "SNOW",
-    "TSMC": "TSM",
-    "Taiwan Semiconductor": "TSM",
-}
+TICKER_ALIASES = get_aliases()
+
 
 # === FLUX RSS ===
 # Sources de news à scanner (classées par fiabilité)
@@ -180,24 +131,27 @@ MAG7_EARNINGS = {
 }
 
 # === TRADING RULES ===
-# Les core rules — ne jamais modifier sans raison
-RISK_PCT_MIN = 0.5       # Risque minimum par trade (%)
-RISK_PCT_MAX = 1.0       # Risque maximum par trade (%)
-RR_MINIMUM = 2.5         # R:R minimum accepté
-MAX_TRADES_PER_DAY = 2   # Maximum de trades par jour
-MAX_EXPOSURE_PCT = 3.0   # Exposition max simultanée (%)
+# Chargées depuis config.yaml
+_trading = get_trading_rules()
+RISK_PCT_MIN = _trading["risk_pct_min"]
+RISK_PCT_MAX = _trading["risk_pct_max"]
+RR_MINIMUM = _trading["rr_minimum"]
+MAX_TRADES_PER_DAY = _trading["max_trades_per_day"]
+MAX_EXPOSURE_PCT = _trading["max_exposure_pct"]
 
 # Killzone (heure CET)
-KILLZONE_START_HOUR = 14
-KILLZONE_START_MIN = 30
-KILLZONE_END_HOUR = 16
-KILLZONE_END_MIN = 30
+_kz = get_killzone()
+_kz_start = _kz.get("start", "14:30").split(":")
+_kz_end = _kz.get("end", "16:30").split(":")
+KILLZONE_START_HOUR = int(_kz_start[0])
+KILLZONE_START_MIN = int(_kz_start[1])
+KILLZONE_END_HOUR = int(_kz_end[0])
+KILLZONE_END_MIN = int(_kz_end[1])
 KILLZONE_TEST_MODE = False   # Mettre True pour forcer la killzone en dev
 
 # === TELEGRAM ===
-# Mettre à True pour envoyer les rapports sur Telegram
-# False = mode test / développement local (dashboard uniquement)
-TELEGRAM_ENABLED = False
+_dashboard = get_dashboard_config()
+TELEGRAM_ENABLED = _dashboard.get("telegram_enabled", False)
 
 # Format des messages
 EMOJI_BULL = "🟢"

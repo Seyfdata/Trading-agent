@@ -1,0 +1,107 @@
+# ============================================
+# SMC-AI Trading Agent — Configuration
+# Modifie ce fichier pour personnaliser ton agent
+# Pas besoin de toucher au code Python !
+# ============================================
+
+# --- Watchlist ---
+watchlist:
+  # Magnificent 7
+  - {ticker: AAPL, name: Apple}
+  - {ticker: NVDA, name: Nvidia}
+  - {ticker: TSLA, name: Tesla}
+  - {ticker: MSFT, name: Microsoft}
+  - {ticker: META, name: Meta}
+  - {ticker: AMZN, name: Amazon}
+  - {ticker: GOOGL, name: Alphabet}
+  # Semi-conducteurs
+  - {ticker: AMD, name: AMD}
+  - {ticker: AVGO, name: Broadcom}
+  - {ticker: QCOM, name: Qualcomm}
+  - {ticker: INTC, name: Intel}
+  - {ticker: MU, name: Micron}
+  - {ticker: ASML, name: ASML Holdings}
+  - {ticker: TSM, name: TSMC}
+  - {ticker: MRVL, name: Marvell}
+  # Tech / Cloud / Cyber
+  - {ticker: PLTR, name: Palantir}
+  - {ticker: SMCI, name: Super Micro Computer}
+  - {ticker: CRM, name: Salesforce}
+  - {ticker: SNOW, name: Snowflake}
+  - {ticker: TWLO, name: Twilio}
+  - {ticker: ZS, name: Zscaler}
+  - {ticker: BABA, name: Alibaba}
+
+# --- Aliases (nom dans les news → ticker) ---
+ticker_aliases:
+  Apple: AAPL
+  iPhone: AAPL
+  Nvidia: NVDA
+  GeForce: NVDA
+  Tesla: TSLA
+  Elon Musk: TSLA
+  Microsoft: MSFT
+  Azure: MSFT
+  Meta Platforms: META
+  Facebook: META
+  Instagram: META
+  Zuckerberg: META
+  Amazon: AMZN
+  AWS: AMZN
+  Alphabet: GOOGL
+  Google: GOOGL
+  Advanced Micro: AMD
+  Broadcom: AVGO
+  Qualcomm: QCOM
+  Snapdragon: QCOM
+  Intel: INTC
+  Micron: MU
+  ASML: ASML
+  TSMC: TSM
+  Taiwan Semiconductor: TSM
+  Palantir: PLTR
+  Super Micro: SMCI
+  SuperMicro: SMCI
+  Salesforce: CRM
+  Snowflake: SNOW
+  Twilio: TWLO
+  Zscaler: ZS
+  Alibaba: BABA
+  Jack Ma: BABA
+  Marvell: MRVL
+
+# --- Killzone ---
+killzone:
+  start: "14:30"
+  end: "16:30"
+  timezone: CET
+  scan_interval_minutes: 5
+  news_interval_minutes: 15
+
+# --- Seuils d'alertes ---
+alerts:
+  volume_breakout_multiplier: 2.0    # alerte si vol > Xx moyenne
+  sma200_proximity_pct: 1.5          # alerte si prix à moins de X% de SMA200
+  strong_move_pct: 3.0               # alerte si variation intraday > X%
+  breaking_news_window_minutes: 30   # fenêtre pour les breaking news
+
+# --- Scoring (pondération des composantes /25 chacune) ---
+scoring:
+  sma200_weight: 25
+  volume_weight: 25
+  reddit_weight: 25
+  news_weight: 25
+
+# --- Trading rules ---
+trading:
+  risk_pct_min: 0.5
+  risk_pct_max: 1.0
+  rr_minimum: 2.5
+  max_trades_per_day: 2
+  max_exposure_pct: 3.0
+
+# --- Dashboard ---
+dashboard:
+  port: 8000
+  auto_refresh_seconds: 300
+  telegram_enabled: false

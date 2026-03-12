@@ -255,6 +255,17 @@ const CHART_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'];
 const RANK_COLORS  = { 1: '#3b82f6', 2: '#8b5cf6', 3: '#10b981' };
 const STYLE_COLORS = { SWING: '#3b82f6', PUMP: '#ef4444', MIXED: '#f59e0b', DAY: '#8b5cf6' };
 
+function isCETAfterKillzone() {
+  try {
+    var d = new Date();
+    var formatter = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hour12: false });
+    var parts = formatter.formatToParts(d);
+    var h = parseInt(parts.find(function(p) { return p.type === 'hour';   }).value, 10);
+    var m = parseInt(parts.find(function(p) { return p.type === 'minute'; }).value, 10);
+    return h * 60 + m >= 16 * 60 + 30;
+  } catch(e) { return false; }
+}
+
 // ── Composants de base ────────────────────────────────────────────────────
 
 function ScoreBar(props) {
@@ -410,10 +421,113 @@ function Top3Section(props) {
   );
 }
 
+// ── Post-Market Section ───────────────────────────────────────────────────
+
+function PostMarketSection(props) {
+  var postmarketData   = props.postmarketData;
+  var pmLoading        = props.pmLoading;
+  var onLoadPostmarket = props.onLoadPostmarket || function() {};
+  var afterKZ = isCETAfterKillzone();
+
+  if (!postmarketData && !pmLoading) {
+    return (
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="rowb">
+          <div>
+            <div className="stitle" style={{ marginBottom: 4 }}>RÉSUMÉ DU JOUR</div>
+            <div className="mc" style={{ fontSize: 11 }}>
+              {afterKZ ? 'Session terminée — données disponibles' : 'Disponible automatiquement après 16h30 CET'}
+            </div>
+          </div>
+          <button className="btn btn-p" onClick={onLoadPostmarket}>📊 Voir le résumé</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (pmLoading) {
+    return (
+      <div className="card" style={{ marginTop: 16, textAlign: 'center', padding: 24 }}>
+        <span className="mc" style={{ fontSize: 12 }}>Chargement du résumé du jour...</span>
+      </div>
+    );
+  }
+
+  if (postmarketData && postmarketData.error) {
+    return (
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="stitle">RÉSUMÉ DU JOUR</div>
+        <div className="mc" style={{ fontSize: 11 }}>Données indisponibles — {postmarketData.error}</div>
+      </div>
+    );
+  }
+
+  var gainers = (postmarketData && postmarketData.top_gainers) || [];
+  var losers  = (postmarketData && postmarketData.top_losers)  || [];
+  var mc      = (postmarketData && postmarketData.market_close) || {};
+  var kzCount = (postmarketData && postmarketData.killzone_alerts_count) || 0;
+
+  function MoverRow(mp) {
+    var item  = mp.item;
+    var bull  = mp.bull;
+    var color = bull ? 'var(--bull)' : 'var(--bear)';
+    var sign  = item.change_pct >= 0 ? '+' : '';
+    return (
+      <div className="rowb" style={{ padding: '6px 0', borderBottom: '1px solid rgba(30,41,59,.3)' }}>
+        <div className="row g8">
+          <a href={'https://www.tradingview.com/chart/?symbol=' + item.ticker} target="_blank" rel="noopener"
+             className="tv-link" style={{ color: color, fontWeight: 700, minWidth: 44 }}>
+            {item.ticker}
+          </a>
+          <span style={{ color: color, fontWeight: 600 }}>{sign}{fmt(item.change_pct)}%</span>
+        </div>
+        <span className="mc" style={{ fontSize: 11 }}>Vol ×{fmt(item.vol_ratio, 1)}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="rowb mb12">
+        <div className="stitle" style={{ marginBottom: 0 }}>📊 RÉSUMÉ DU JOUR</div>
+        {kzCount > 0 && (
+          <span className="badge b-bear" style={{ fontSize: 10 }}>⚡ {kzCount} alerte{kzCount > 1 ? 's' : ''} session</span>
+        )}
+      </div>
+      <div className="g2" style={{ marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 10, color: 'var(--bull)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, fontWeight: 700 }}>🟢 TOP GAINS</div>
+          {gainers.length > 0
+            ? gainers.map(function(g) { return <MoverRow key={g.ticker} item={g} bull={true} />; })
+            : <div className="mc" style={{ fontSize: 11 }}>—</div>}
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: 'var(--bear)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, fontWeight: 700 }}>🔴 TOP PERTES</div>
+          {losers.length > 0
+            ? losers.map(function(l) { return <MoverRow key={l.ticker} item={l} bull={false} />; })
+            : <div className="mc" style={{ fontSize: 11 }}>—</div>}
+        </div>
+      </div>
+      {Object.keys(mc).length > 0 && (
+        <div style={{ padding: '8px 12px', background: 'rgba(0,0,0,.2)', borderRadius: 6, border: '1px solid rgba(30,41,59,.5)' }}>
+          <div className="row g12 wrap">
+            {mc.spy && <span><span className="mc" style={{ fontSize: 10 }}>SPY </span><span style={{ color: chgClr(mc.spy.change_pct), fontWeight: 600 }}>{mc.spy.change_pct >= 0 ? '+' : ''}{fmt(mc.spy.change_pct)}%</span></span>}
+            {mc.qqq && <span><span className="mc" style={{ fontSize: 10 }}>QQQ </span><span style={{ color: chgClr(mc.qqq.change_pct), fontWeight: 600 }}>{mc.qqq.change_pct >= 0 ? '+' : ''}{fmt(mc.qqq.change_pct)}%</span></span>}
+            {mc.vix && <span><span className="mc" style={{ fontSize: 10 }}>VIX </span><span style={{ fontWeight: 600 }}>{fmt(mc.vix.price)}</span><span style={{ color: chgClr(mc.vix.change_pct), fontSize: 11 }}> ({mc.vix.change_pct >= 0 ? '+' : ''}{fmt(mc.vix.change_pct)}%)</span></span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Overview Tab ──────────────────────────────────────────────────────────
 
 function OverviewTab(props) {
-  var data = props.data;
+  var data             = props.data;
+  var postmarketData   = props.postmarketData;
+  var pmLoading        = props.pmLoading;
+  var onLoadPostmarket = props.onLoadPostmarket || function() {};
   var inst = (data.market && data.market.instruments) ? data.market.instruments : {};
   var redditItems = (data.reddit && data.reddit.data) ? data.reddit.data.filter(function(r) { return r.in_watchlist; }).slice(0, 5) : [];
   var newsItems = data.news ? [].concat(data.news.ticker_news || [], data.news.market_news || []).slice(0, 5) : [];
@@ -473,6 +587,7 @@ function OverviewTab(props) {
           </div>
         </div>
       </div>
+      <PostMarketSection postmarketData={postmarketData} pmLoading={pmLoading} onLoadPostmarket={onLoadPostmarket} />
     </div>
   );
 }
@@ -980,6 +1095,14 @@ function TradingDashboard() {
   var testExpiry      = testExpiryState[0];
   var setTestExpiry   = testExpiryState[1];
 
+  var pmDataState    = useState(null);
+  var pmData         = pmDataState[0];
+  var setPmData      = pmDataState[1];
+
+  var pmLoadingState = useState(false);
+  var pmLoading      = pmLoadingState[0];
+  var setPmLoading   = pmLoadingState[1];
+
   useEffect(function() {
     // Charger chaque endpoint indépendamment — mise à jour dès réception, timeout 15s
     var eps = ['market', 'tickers', 'reddit', 'news', 'macro', 'history'];
@@ -1041,6 +1164,14 @@ function TradingDashboard() {
     // Premier appel immédiat
     fetchAlerts();
     fetchAlertNews();
+
+    // Auto-load résumé post-market si on est après 16h30 CET
+    if (isCETAfterKillzone()) {
+      fetch('/api/postmarket')
+        .then(function(r) { return r.json(); })
+        .then(function(json) { setPmData(json); })
+        .catch(function() {});
+    }
 
     var alertTimer = setInterval(function() {
       alertTick--;
@@ -1115,6 +1246,15 @@ function TradingDashboard() {
       });
   }
 
+  function loadPostmarket() {
+    if (pmLoading) return;
+    setPmLoading(true);
+    fetch('/api/postmarket')
+      .then(function(r) { return r.json(); })
+      .then(function(json) { setPmData(json); setPmLoading(false); })
+      .catch(function() { setPmLoading(false); });
+  }
+
   var fmtTime = function(d) { return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
   var fmtDate = function(d) { return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }); };
 
@@ -1178,7 +1318,7 @@ function TradingDashboard() {
       </nav>
 
       <main className="content">
-        {tab === 'overview'  && <OverviewTab  data={data} />}
+        {tab === 'overview'  && <OverviewTab  data={data} postmarketData={pmData} pmLoading={pmLoading} onLoadPostmarket={loadPostmarket} />}
         {tab === 'watchlist' && <WatchlistTab data={data} />}
         {tab === 'reddit'    && <RedditTab    data={data} />}
         {tab === 'news'      && <NewsTab      data={data} />}
